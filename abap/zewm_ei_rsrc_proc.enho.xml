@@ -1,0 +1,21 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_ENHO" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <TOOL>BADI_IMPL</TOOL>
+   <SHORTTEXT>Process WHO</SHORTTEXT>
+   <SPOT_NAME>/SCWM/ES_RSRC_PROC</SPOT_NAME>
+   <IMPL>
+    <ENH_BADI_IMPL_DATA>
+     <SPOT_NAME>/SCWM/ES_RSRC_PROC</SPOT_NAME>
+     <BADI_NAME>/SCWM/EX_RSRC_PROC_WO</BADI_NAME>
+     <IMPL_NAME>ZEWM_IM_RSRC_PROC</IMPL_NAME>
+     <IMPL_CLASS>ZEWM_CL_RSRC_PROC</IMPL_CLASS>
+     <ACTIVE>X</ACTIVE>
+     <IMPL_SHORTTEXT>WHO Process</IMPL_SHORTTEXT>
+     <IMPL_SHORTTEXT_ID>005056071A621EE88AA493FE7F299B50</IMPL_SHORTTEXT_ID>
+    </ENH_BADI_IMPL_DATA>
+   </IMPL>
+  </asx:values>
+ </asx:abap>
+</abapGit>

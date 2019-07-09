@@ -1,0 +1,371 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<abapGit version="v1.0.0" serializer="LCL_OBJECT_FUGR" serializer_version="v1.0.0">
+ <asx:abap xmlns:asx="http://www.sap.com/abapxml" version="1.0">
+  <asx:values>
+   <AREAT>RobCo Enhancement</AREAT>
+   <INCLUDES>
+    <SOBJ_NAME>LZEWM_RF_ROBCOTOP</SOBJ_NAME>
+    <SOBJ_NAME>SAPLZEWM_RF_ROBCO</SOBJ_NAME>
+   </INCLUDES>
+   <FUNCTIONS>
+    <item>
+     <FUNCNAME>ZEWM_RF_ROBCO_0100_PAI</FUNCNAME>
+     <SHORT_TEXT>PAI screen 0100</SHORT_TEXT>
+     <CHANGING>
+      <RSCHA>
+       <PARAMETER>CS_ROBOT</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>ZEWM_S_RF_ROBOT</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>SELECTION</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_RF_SELECTION</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>RESOURCE</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_RSRC</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>ORDIM_CONFIRM</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_RF_ORDIM_CONFIRM</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>WHO</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_WHO_INT</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>T_RF_PICK_HUS</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/TT_RF_PICK_HUS</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>TT_ORDIM_CONFIRM</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/TT_RF_ORDIM_CONFIRM</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>WME_VERIF</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_WME_VERIF</TYP>
+      </RSCHA>
+     </CHANGING>
+     <DOCUMENTATION>
+      <RSFDO>
+       <PARAMETER>CS_ROBOT</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Robots in RF</STEXT>
+       <INDEX> 001</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>SELECTION</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>RF selection criteria for WO execution</STEXT>
+       <INDEX> 002</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>RESOURCE</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Resource and User Data</STEXT>
+       <INDEX> 003</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>ORDIM_CONFIRM</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>RF Transfer Order Confirmation</STEXT>
+       <INDEX> 004</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>WHO</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Internal Warehouse Order Structure</STEXT>
+       <INDEX> 005</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>T_RF_PICK_HUS</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>RF Pick-Handling Units</STEXT>
+       <INDEX> 006</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>TT_ORDIM_CONFIRM</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>RF Transfer Order Confirmation</STEXT>
+       <INDEX> 007</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>WME_VERIF</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Key Fields for Determining the Verification Profile in WME</STEXT>
+       <INDEX> 008</INDEX>
+      </RSFDO>
+     </DOCUMENTATION>
+    </item>
+    <item>
+     <FUNCNAME>ZEWM_RF_ROBCO_0100_PBO</FUNCNAME>
+     <SHORT_TEXT>PBO screen 0100</SHORT_TEXT>
+     <CHANGING>
+      <RSCHA>
+       <PARAMETER>CS_ROBOT</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>ZEWM_S_RF_ROBOT</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>SELECTION</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_RF_SELECTION</TYP>
+      </RSCHA>
+     </CHANGING>
+     <DOCUMENTATION>
+      <RSFDO>
+       <PARAMETER>CS_ROBOT</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Robots in RF</STEXT>
+       <INDEX> 001</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>SELECTION</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>RF selection criteria for WO execution</STEXT>
+       <INDEX> 002</INDEX>
+      </RSFDO>
+     </DOCUMENTATION>
+    </item>
+    <item>
+     <FUNCNAME>ZEWM_RF_ROBCO_PICK_PIMTTO_PAI</FUNCNAME>
+     <SHORT_TEXT>RF Picking - Pick MTTO PAI</SHORT_TEXT>
+     <CHANGING>
+      <RSCHA>
+       <PARAMETER>SELECTION</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_RF_SELECTION</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>RESOURCE</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_RSRC</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>WHO</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_WHO_INT</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>ORDIM_CONFIRM</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_RF_ORDIM_CONFIRM</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>TT_ORDIM_CONFIRM</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/TT_RF_ORDIM_CONFIRM</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>TT_NESTED_HU</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/TT_RF_NESTED_HU</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>T_RF_PICK_HUS</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/TT_RF_PICK_HUS</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>CT_SERNR</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/TT_RF_SERNR</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>CT_SERNR_DIFF</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/TT_RF_SERNR</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>CS_SN</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_RF_SN</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>WME_VERIF</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/S_WME_VERIF</TYP>
+      </RSCHA>
+      <RSCHA>
+       <PARAMETER>CT_SERNR_LSCK</PARAMETER>
+       <REFERENCE>X</REFERENCE>
+       <TYP>/SCWM/TT_RF_SERNR</TYP>
+      </RSCHA>
+     </CHANGING>
+     <DOCUMENTATION>
+      <RSFDO>
+       <PARAMETER>SELECTION</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>RF Selection criteria for WO execution</STEXT>
+       <INDEX> 001</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>RESOURCE</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Resource</STEXT>
+       <INDEX> 002</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>WHO</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Internal Warehouse Order Structure</STEXT>
+       <INDEX> 003</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>ORDIM_CONFIRM</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>RF Order Item Confirmation</STEXT>
+       <INDEX> 004</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>TT_ORDIM_CONFIRM</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>RF Order Item Confirmation</STEXT>
+       <INDEX> 005</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>TT_NESTED_HU</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>RF Nested HU</STEXT>
+       <INDEX> 006</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>T_RF_PICK_HUS</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>RF Pick Handling Units</STEXT>
+       <INDEX> 007</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>CT_SERNR</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Tabelle zur RF Serialnummern-Erfassung</STEXT>
+       <INDEX> 008</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>CT_SERNR_DIFF</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Tabelle zur RF Serialnummern-Erfassung</STEXT>
+       <INDEX> 009</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>CS_SN</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Struktur zur RF Serialnummern-Erfassung</STEXT>
+       <INDEX> 010</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>WME_VERIF</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Schlüsselfelder zur Findung des Verifikationsprofils in WME</STEXT>
+       <INDEX> 011</INDEX>
+      </RSFDO>
+      <RSFDO>
+       <PARAMETER>CT_SERNR_LSCK</PARAMETER>
+       <KIND>P</KIND>
+       <STEXT>Table for RF Serial Number Creation</STEXT>
+       <INDEX> 012</INDEX>
+      </RSFDO>
+     </DOCUMENTATION>
+    </item>
+   </FUNCTIONS>
+   <DYNPROS>
+    <item>
+     <HEADER>
+      <PROGRAM>SAPLZEWM_RF_ROBCO</PROGRAM>
+      <SCREEN>0100</SCREEN>
+      <LANGUAGE>E</LANGUAGE>
+      <DESCRIPT>Entry screen for robot picking</DESCRIPT>
+      <TYPE>I</TYPE>
+      <NEXTSCREEN>0100</NEXTSCREEN>
+      <LINES>008</LINES>
+      <COLUMNS>040</COLUMNS>
+     </HEADER>
+     <CONTAINERS>
+      <RPY_DYCATT>
+       <TYPE>SCREEN</TYPE>
+       <NAME>SCREEN</NAME>
+      </RPY_DYCATT>
+     </CONTAINERS>
+     <FIELDS>
+      <RPY_DYFATC>
+       <CONT_TYPE>SCREEN</CONT_TYPE>
+       <CONT_NAME>SCREEN</CONT_NAME>
+       <TYPE>TEXT</TYPE>
+       <NAME>ZEWM_S_RF_ROBOT-ROBOT</NAME>
+       <TEXT>Robot_____</TEXT>
+       <LINE>001</LINE>
+       <COLUMN>001</COLUMN>
+       <LENGTH>010</LENGTH>
+       <VISLENGTH>010</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <FORMAT>CHAR</FORMAT>
+       <FROM_DICT>X</FROM_DICT>
+       <MODIFIC>F</MODIFIC>
+       <REQU_ENTRY>N</REQU_ENTRY>
+       <LABELLEFT>X</LABELLEFT>
+      </RPY_DYFATC>
+      <RPY_DYFATC>
+       <CONT_TYPE>SCREEN</CONT_TYPE>
+       <CONT_NAME>SCREEN</CONT_NAME>
+       <TYPE>TEMPLATE</TYPE>
+       <NAME>ZEWM_S_RF_ROBOT-ROBOT</NAME>
+       <TEXT>__________________</TEXT>
+       <LINE>001</LINE>
+       <COLUMN>013</COLUMN>
+       <LENGTH>018</LENGTH>
+       <VISLENGTH>018</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <FORMAT>CHAR</FORMAT>
+       <FROM_DICT>X</FROM_DICT>
+       <FOREIGNKEY>X</FOREIGNKEY>
+       <INPUT_FLD>X</INPUT_FLD>
+       <OUTPUT_FLD>X</OUTPUT_FLD>
+      </RPY_DYFATC>
+      <RPY_DYFATC>
+       <CONT_TYPE>SCREEN</CONT_TYPE>
+       <CONT_NAME>SCREEN</CONT_NAME>
+       <TYPE>OKCODE</TYPE>
+       <TEXT>____________________</TEXT>
+       <LENGTH>020</LENGTH>
+       <VISLENGTH>020</VISLENGTH>
+       <HEIGHT>001</HEIGHT>
+       <FORMAT>CHAR</FORMAT>
+       <INPUT_FLD>X</INPUT_FLD>
+      </RPY_DYFATC>
+     </FIELDS>
+     <FLOW_LOGIC>
+      <RPY_DYFLOW>
+       <LINE>PROCESS BEFORE OUTPUT.</LINE>
+      </RPY_DYFLOW>
+      <RPY_DYFLOW>
+       <LINE>MODULE status_sscr.</LINE>
+      </RPY_DYFLOW>
+      <RPY_DYFLOW>
+       <LINE>*</LINE>
+      </RPY_DYFLOW>
+      <RPY_DYFLOW>
+       <LINE>PROCESS AFTER INPUT.</LINE>
+      </RPY_DYFLOW>
+      <RPY_DYFLOW>
+       <LINE>MODULE user_command_sscr.</LINE>
+      </RPY_DYFLOW>
+     </FLOW_LOGIC>
+     <SPACES>
+      <item>0</item>
+      <item>2</item>
+      <item>0</item>
+      <item>0</item>
+      <item>2</item>
+     </SPACES>
+    </item>
+   </DYNPROS>
+  </asx:values>
+ </asx:abap>
+</abapGit>
