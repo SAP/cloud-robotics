@@ -46,6 +46,8 @@ FUNCTION zewm_rf_robco_0100_pai.
 *   check sub-who found
     IF lv_who_sub IS NOT INITIAL.
 
+*     Simulate logical transaction PIPWHO
+      /scwm/cl_rf_bll_srvc=>set_ltrans_simu( 'PIBWHO' ).
       selection-who = lv_who_sub.
 
 *     call standard fm

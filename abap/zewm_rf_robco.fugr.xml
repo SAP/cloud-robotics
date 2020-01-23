@@ -4,6 +4,11 @@
   <asx:values>
    <AREAT>RobCo Enhancement</AREAT>
    <INCLUDES>
+    <SOBJ_NAME>/SCWM/LRF_SSCRI01</SOBJ_NAME>
+    <SOBJ_NAME>/SCWM/LRF_SSCRI02</SOBJ_NAME>
+    <SOBJ_NAME>/SCWM/LRF_SSCRO01</SOBJ_NAME>
+    <SOBJ_NAME>/SCWM/LRF_SSCRO02</SOBJ_NAME>
+    <SOBJ_NAME>/SCWM/LRF_SSCRO03</SOBJ_NAME>
     <SOBJ_NAME>LZEWM_RF_ROBCOTOP</SOBJ_NAME>
     <SOBJ_NAME>SAPLZEWM_RF_ROBCO</SOBJ_NAME>
    </INCLUDES>
@@ -58,49 +63,41 @@
        <PARAMETER>CS_ROBOT</PARAMETER>
        <KIND>P</KIND>
        <STEXT>Robots in RF</STEXT>
-       <INDEX> 001</INDEX>
       </RSFDO>
       <RSFDO>
        <PARAMETER>SELECTION</PARAMETER>
        <KIND>P</KIND>
        <STEXT>RF selection criteria for WO execution</STEXT>
-       <INDEX> 002</INDEX>
       </RSFDO>
       <RSFDO>
        <PARAMETER>RESOURCE</PARAMETER>
        <KIND>P</KIND>
        <STEXT>Resource and User Data</STEXT>
-       <INDEX> 003</INDEX>
       </RSFDO>
       <RSFDO>
        <PARAMETER>ORDIM_CONFIRM</PARAMETER>
        <KIND>P</KIND>
        <STEXT>RF Transfer Order Confirmation</STEXT>
-       <INDEX> 004</INDEX>
       </RSFDO>
       <RSFDO>
        <PARAMETER>WHO</PARAMETER>
        <KIND>P</KIND>
        <STEXT>Internal Warehouse Order Structure</STEXT>
-       <INDEX> 005</INDEX>
       </RSFDO>
       <RSFDO>
        <PARAMETER>T_RF_PICK_HUS</PARAMETER>
        <KIND>P</KIND>
        <STEXT>RF Pick-Handling Units</STEXT>
-       <INDEX> 006</INDEX>
       </RSFDO>
       <RSFDO>
        <PARAMETER>TT_ORDIM_CONFIRM</PARAMETER>
        <KIND>P</KIND>
        <STEXT>RF Transfer Order Confirmation</STEXT>
-       <INDEX> 007</INDEX>
       </RSFDO>
       <RSFDO>
        <PARAMETER>WME_VERIF</PARAMETER>
        <KIND>P</KIND>
        <STEXT>Key Fields for Determining the Verification Profile in WME</STEXT>
-       <INDEX> 008</INDEX>
       </RSFDO>
      </DOCUMENTATION>
     </item>
@@ -124,153 +121,11 @@
        <PARAMETER>CS_ROBOT</PARAMETER>
        <KIND>P</KIND>
        <STEXT>Robots in RF</STEXT>
-       <INDEX> 001</INDEX>
       </RSFDO>
       <RSFDO>
        <PARAMETER>SELECTION</PARAMETER>
        <KIND>P</KIND>
        <STEXT>RF selection criteria for WO execution</STEXT>
-       <INDEX> 002</INDEX>
-      </RSFDO>
-     </DOCUMENTATION>
-    </item>
-    <item>
-     <FUNCNAME>ZEWM_RF_ROBCO_PICK_PIMTTO_PAI</FUNCNAME>
-     <SHORT_TEXT>RF Picking - Pick MTTO PAI</SHORT_TEXT>
-     <CHANGING>
-      <RSCHA>
-       <PARAMETER>SELECTION</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/S_RF_SELECTION</TYP>
-      </RSCHA>
-      <RSCHA>
-       <PARAMETER>RESOURCE</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/S_RSRC</TYP>
-      </RSCHA>
-      <RSCHA>
-       <PARAMETER>WHO</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/S_WHO_INT</TYP>
-      </RSCHA>
-      <RSCHA>
-       <PARAMETER>ORDIM_CONFIRM</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/S_RF_ORDIM_CONFIRM</TYP>
-      </RSCHA>
-      <RSCHA>
-       <PARAMETER>TT_ORDIM_CONFIRM</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/TT_RF_ORDIM_CONFIRM</TYP>
-      </RSCHA>
-      <RSCHA>
-       <PARAMETER>TT_NESTED_HU</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/TT_RF_NESTED_HU</TYP>
-      </RSCHA>
-      <RSCHA>
-       <PARAMETER>T_RF_PICK_HUS</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/TT_RF_PICK_HUS</TYP>
-      </RSCHA>
-      <RSCHA>
-       <PARAMETER>CT_SERNR</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/TT_RF_SERNR</TYP>
-      </RSCHA>
-      <RSCHA>
-       <PARAMETER>CT_SERNR_DIFF</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/TT_RF_SERNR</TYP>
-      </RSCHA>
-      <RSCHA>
-       <PARAMETER>CS_SN</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/S_RF_SN</TYP>
-      </RSCHA>
-      <RSCHA>
-       <PARAMETER>WME_VERIF</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/S_WME_VERIF</TYP>
-      </RSCHA>
-      <RSCHA>
-       <PARAMETER>CT_SERNR_LSCK</PARAMETER>
-       <REFERENCE>X</REFERENCE>
-       <TYP>/SCWM/TT_RF_SERNR</TYP>
-      </RSCHA>
-     </CHANGING>
-     <DOCUMENTATION>
-      <RSFDO>
-       <PARAMETER>SELECTION</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>RF Selection criteria for WO execution</STEXT>
-       <INDEX> 001</INDEX>
-      </RSFDO>
-      <RSFDO>
-       <PARAMETER>RESOURCE</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>Resource</STEXT>
-       <INDEX> 002</INDEX>
-      </RSFDO>
-      <RSFDO>
-       <PARAMETER>WHO</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>Internal Warehouse Order Structure</STEXT>
-       <INDEX> 003</INDEX>
-      </RSFDO>
-      <RSFDO>
-       <PARAMETER>ORDIM_CONFIRM</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>RF Order Item Confirmation</STEXT>
-       <INDEX> 004</INDEX>
-      </RSFDO>
-      <RSFDO>
-       <PARAMETER>TT_ORDIM_CONFIRM</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>RF Order Item Confirmation</STEXT>
-       <INDEX> 005</INDEX>
-      </RSFDO>
-      <RSFDO>
-       <PARAMETER>TT_NESTED_HU</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>RF Nested HU</STEXT>
-       <INDEX> 006</INDEX>
-      </RSFDO>
-      <RSFDO>
-       <PARAMETER>T_RF_PICK_HUS</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>RF Pick Handling Units</STEXT>
-       <INDEX> 007</INDEX>
-      </RSFDO>
-      <RSFDO>
-       <PARAMETER>CT_SERNR</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>Tabelle zur RF Serialnummern-Erfassung</STEXT>
-       <INDEX> 008</INDEX>
-      </RSFDO>
-      <RSFDO>
-       <PARAMETER>CT_SERNR_DIFF</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>Tabelle zur RF Serialnummern-Erfassung</STEXT>
-       <INDEX> 009</INDEX>
-      </RSFDO>
-      <RSFDO>
-       <PARAMETER>CS_SN</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>Struktur zur RF Serialnummern-Erfassung</STEXT>
-       <INDEX> 010</INDEX>
-      </RSFDO>
-      <RSFDO>
-       <PARAMETER>WME_VERIF</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>Schlüsselfelder zur Findung des Verifikationsprofils in WME</STEXT>
-       <INDEX> 011</INDEX>
-      </RSFDO>
-      <RSFDO>
-       <PARAMETER>CT_SERNR_LSCK</PARAMETER>
-       <KIND>P</KIND>
-       <STEXT>Table for RF Serial Number Creation</STEXT>
-       <INDEX> 012</INDEX>
       </RSFDO>
      </DOCUMENTATION>
     </item>
@@ -324,7 +179,6 @@
        <HEIGHT>001</HEIGHT>
        <FORMAT>CHAR</FORMAT>
        <FROM_DICT>X</FROM_DICT>
-       <FOREIGNKEY>X</FOREIGNKEY>
        <INPUT_FLD>X</INPUT_FLD>
        <OUTPUT_FLD>X</OUTPUT_FLD>
       </RPY_DYFATC>
