@@ -22,9 +22,10 @@ import (
 	"log"
 	"net/http"
 
-	apps "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	registry "github.com/googlecloudrobotics/core/src/go/pkg/apis/registry/v1alpha1"
-	"github.com/googlecloudrobotics/core/src/go/pkg/controller/approllout"
+	apps "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	config "github.com/SAP/cloud-robotics/src/go/pkg/apis/config/v1alpha1"
+	registry "github.com/SAP/cloud-robotics/src/go/pkg/apis/registry/v1alpha1"
+	"github.com/SAP/cloud-robotics/src/go/pkg/controller/approllout"
 	"github.com/pkg/errors"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -82,6 +83,7 @@ func setupAppV2(ctx context.Context, cfg *rest.Config, params map[string]interfa
 	scheme.AddToScheme(sc)
 	apps.AddToScheme(sc)
 	registry.AddToScheme(sc)
+	config.AddToScheme(sc)
 
 	mgr, err := manager.New(cfg, manager.Options{
 		Scheme:             sc,

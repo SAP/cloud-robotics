@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
@@ -29,9 +29,8 @@ type AppRolloutLister interface {
 	// List lists all AppRollouts in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.AppRollout, err error)
-	// Get retrieves the AppRollout from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.AppRollout, error)
+	// AppRollouts returns an object that can list and get AppRollouts.
+	AppRollouts(namespace string) AppRolloutNamespaceLister
 	AppRolloutListerExpansion
 }
 
@@ -53,9 +52,41 @@ func (s *appRolloutLister) List(selector labels.Selector) (ret []*v1alpha1.AppRo
 	return ret, err
 }
 
-// Get retrieves the AppRollout from the index for a given name.
-func (s *appRolloutLister) Get(name string) (*v1alpha1.AppRollout, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+// AppRollouts returns an object that can list and get AppRollouts.
+func (s *appRolloutLister) AppRollouts(namespace string) AppRolloutNamespaceLister {
+	return appRolloutNamespaceLister{indexer: s.indexer, namespace: namespace}
+}
+
+// AppRolloutNamespaceLister helps list and get AppRollouts.
+// All objects returned here must be treated as read-only.
+type AppRolloutNamespaceLister interface {
+	// List lists all AppRollouts in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha1.AppRollout, err error)
+	// Get retrieves the AppRollout from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
+	Get(name string) (*v1alpha1.AppRollout, error)
+	AppRolloutNamespaceListerExpansion
+}
+
+// appRolloutNamespaceLister implements the AppRolloutNamespaceLister
+// interface.
+type appRolloutNamespaceLister struct {
+	indexer   cache.Indexer
+	namespace string
+}
+
+// List lists all AppRollouts in the indexer for a given namespace.
+func (s appRolloutNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.AppRollout, err error) {
+	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.AppRollout))
+	})
+	return ret, err
+}
+
+// Get retrieves the AppRollout from the indexer for a given namespace and name.
+func (s appRolloutNamespaceLister) Get(name string) (*v1alpha1.AppRollout, error) {
+	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
 	if err != nil {
 		return nil, err
 	}

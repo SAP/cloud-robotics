@@ -17,8 +17,8 @@
 package registry
 
 import (
-	internalinterfaces "github.com/googlecloudrobotics/core/src/go/pkg/client/informers/internalinterfaces"
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/client/informers/registry/v1alpha1"
+	internalinterfaces "github.com/SAP/cloud-robotics/src/go/pkg/client/informers/internalinterfaces"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/informers/registry/v1alpha1"
 )
 
 // Interface provides access to each of this group's versions.

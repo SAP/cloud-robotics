@@ -1,37 +1,53 @@
-# Cloud Robotics Core
+# 🤖  Cloud Robotics 🤖 
+[![REUSE status](https://api.reuse.software/badge/github.com/SAP/cloud-robotics)](https://api.reuse.software/info/github.com/SAP/cloud-robotics)
 
-Google's Cloud Robotics Core is an open source platform that provides
+This Cloud Robotics version is our adaption of the open source
+[Google Cloud Robotics](https://github.com/googlecloudrobotics/core) platform that provides
 infrastructure essential to building and running robotics solutions for business
 automation. Cloud Robotics Core makes managing robot fleets easy for developers,
 integrators, and operators. It enables:
 
 * packaging and distribution of applications
 * secure, bidirectional robot-cloud communication
-* easy access to Google Cloud services such as ML, logging, and monitoring.
+* easy integration into SAP BTP Kyma infrastructure.
 
-![Cloud Robotics Core overview](docs/cloud-robotics-core-overview.png)
-
-Cloud Robotics Core is open source and pre-alpha. Support is currently limited
-to a small set of early access partners. We will gladly accept contributions
-and feedback, but we are making no stability or support guarantees at this
-point in time.
+We consider it as a friendly fork of Google Cloud Robotics and try to keep it as close as possible to it. However there are some differences:
+- This version does not Google Cloud Platform services
+- We introduced multi-tenancy features
+- Some components we did not use have been removed
+- There are docker builds instead of bazel
+- Cluster provisiong is separated from deployment of Cloud Robotics. In fact there is no automated cluster provisioning at the moment.
 
 # Documentation
 
-Documentation of the platform and related How-to guides can be found at: https://googlecloudrobotics.github.io/core/
-
-# Get Involved
-
-If you want to get involved, please refer to [CONTRIBUTING.md](CONTRIBUTING.md),
-reach out to [cloud-robotics-discuss@googlegroups.com](https://groups.google.com/forum/#!forum/cloud-robotics-discuss)
-or ask Stack Overflow questions with [#google-cloud-robotics](https://stackoverflow.com/questions/tagged/google-cloud-robotics).
+Documentation of the applications and their architecture can be found at:
+https://sap.github.io/cloud-robotics/
 
 # Source Code
 
-Most interesting bits are under `src`:
-* app_charts: contains kubernetes resources for the core platform and apps
-* bootstrap: provisioning for the cloud (terraform) and the robot (debian package)
-* go/java/proto/python: the code that goes into images referenced from `app_charts`
+Most interesting bits are under `src` and `charts`:
+* `src/go`: the code that goes into images referenced from `charts`
+* `charts` contains kubernetes resources for the core platform and apps
 
-The root directory contains a `deploy.sh` script for building and installing the software. More
-details on that are in the [building from sources](how-to/deploy-from-sources) guide.
+# Deployment
+
+We built and tested Cloud Robotics using [Kyma](https://kyma-project.io/) k8s clusters where it naturally runs best.
+However most of our functions are working using [Kubernetes](https://kubernetes.io/) plus [Istio](https://istio.io/) only.
+
+We Cloud Robotics our deployment on these Kubernetes infrastructure so far:
+- SAP BTP Kyma
+- Kyma @ Gardener
+- Istio @ Gardener
+- Istio @ GCP
+
+For getting started please see the [deploy-from-sources how-to](docs/how-to/deploy-from-sources.md).
+
+# Setting up and connecting robot clusters
+
+Please see the [connecting-robot how-to](docs/how-to/connecting-robot.md).
+
+# Are you looking for a Cloud Robotics use case?
+Try executing SAP EWM warehouse orders on autonmous robots 🤖 with the apps of our [EWM Cloud Robotics repository](https://github.com/SAP/ewm-cloud-robotics/).
+
+# Get involved
+You are welcome to join forces with us in the quest to ease deploying applications on 🤖! Simply check the [Contribution Guidelines](CONTRIBUTING.md).

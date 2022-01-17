@@ -1,0 +1,17 @@
+{{- $ca := genCA "{{ .Values.domain }}" 36500 }}
+{{- $key := b64enc $ca.Key }}
+{{- $crt := b64enc $ca.Cert }}
+{{- $secretName := "cluster-authority"}}
+{{- $secret := (lookup "v1" "Secret" .Release.Namespace $secretName) }}
+{{- if $secret}}
+{{- $key = index $secret.data "tls.key" }}
+{{- $crt = index $secret.data "tls.crt" }}
+{{- end }}
+apiVersion: v1
+kind: Secret
+metadata:
+  name: "{{ $secretName }}"
+type: kubernetes.io/tls
+data:
+  tls.key: {{ $key }}
+  tls.crt: {{ $crt }}

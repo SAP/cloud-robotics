@@ -19,8 +19,10 @@ package informers
 import (
 	"fmt"
 
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	registryv1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/registry/v1alpha1"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	configv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/config/v1alpha1"
+	missionv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/mission/v1alpha1"
+	registryv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/registry/v1alpha1"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
 	cache "k8s.io/client-go/tools/cache"
 )
@@ -60,6 +62,14 @@ func (f *sharedInformerFactory) ForResource(resource schema.GroupVersionResource
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apps().V1alpha1().ChartAssignments().Informer()}, nil
 	case v1alpha1.SchemeGroupVersion.WithResource("resourcesets"):
 		return &genericInformer{resource: resource.GroupResource(), informer: f.Apps().V1alpha1().ResourceSets().Informer()}, nil
+
+		// Group=config.cloudrobotics.com, Version=v1alpha1
+	case configv1alpha1.SchemeGroupVersion.WithResource("tenants"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Config().V1alpha1().Tenants().Informer()}, nil
+
+		// Group=mission.cloudrobotics.com, Version=v1alpha1
+	case missionv1alpha1.SchemeGroupVersion.WithResource("missions"):
+		return &genericInformer{resource: resource.GroupResource(), informer: f.Mission().V1alpha1().Missions().Informer()}, nil
 
 		// Group=registry.cloudrobotics.com, Version=v1alpha1
 	case registryv1alpha1.SchemeGroupVersion.WithResource("robots"):

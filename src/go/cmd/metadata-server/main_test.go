@@ -59,7 +59,7 @@ func TestTokenHandlerServesToken(t *testing.T) {
 	req.RemoteAddr = "192.168.0.101:8001"
 	respRecorder := httptest.NewRecorder()
 	th := TokenHandler{
-		AllowedSources: &net.IPNet{net.IPv4(192, 168, 0, 0), net.CIDRMask(24, 32)},
+		AllowedSources: &net.IPNet{IP: net.IPv4(192, 168, 0, 0), Mask: net.CIDRMask(24, 32)},
 		TokenSource:    oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "mytoken", Expiry: time.Unix(1531319133, 0), TokenType: "Bearer"}),
 		Clock:          func() time.Time { return time.Unix(1531319123, 0) },
 	}
@@ -78,7 +78,7 @@ func TestTokenHandlerDeniesWrongAddress(t *testing.T) {
 	req.RemoteAddr = "192.168.1.101:8001"
 	respRecorder := httptest.NewRecorder()
 	th := TokenHandler{
-		AllowedSources: &net.IPNet{net.IPv4(192, 168, 0, 0), net.CIDRMask(24, 32)},
+		AllowedSources: &net.IPNet{IP: net.IPv4(192, 168, 0, 0), Mask: net.CIDRMask(24, 32)},
 		TokenSource:    oauth2.StaticTokenSource(&oauth2.Token{AccessToken: "mytoken"}),
 	}
 	th.ServeHTTP(respRecorder, req)

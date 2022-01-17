@@ -1,0 +1,10 @@
+registry: "registry.sap.com/my-project"
+domain: "example.com"
+setup_robot_crc: "0.1.0_xyz"
+default_gateway: kyma-system/kyma-gateway
+images:
+  setup_robot: "setup-robot:latest"
+  chart_assignment_controller: "chart-assignment-controller:latest"
+  cr_syncer: "cr-syncer:latest"
+  metadata_server: "metadata-server:latest"
+  logging_proxy: "logging-proxy:latest"

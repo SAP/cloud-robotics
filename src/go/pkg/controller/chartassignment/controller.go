@@ -1,5 +1,4 @@
 // Copyright 2019 The Cloud Robotics Authors
-
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -23,8 +22,8 @@ import (
 	"strings"
 	"time"
 
-	apps "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	"github.com/googlecloudrobotics/core/src/go/pkg/gcr"
+	apps "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	"github.com/SAP/cloud-robotics/src/go/pkg/coretools"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -117,7 +116,7 @@ func (r *Reconciler) enqueueForPod(ctx context.Context, m meta.Object, q workque
 	}
 	for _, ca := range cas.Items {
 		q.Add(reconcile.Request{
-			NamespacedName: kclient.ObjectKey{Name: ca.Name},
+			NamespacedName: kclient.ObjectKey{Name: ca.Name, Namespace: ca.Namespace},
 		})
 	}
 }
@@ -164,26 +163,6 @@ const (
 	requeueSlow = 3 * time.Minute
 )
 
-// namespaceDeletionError indicates that a namespace could not be created
-// because a previously-created namespace with the same name is pending
-// deletion. This occurs when you delete and recreate a chartassignment. It is
-// transient, but may last seconds or minutes if the namespace contains
-// resources that are slow to delete.
-type namespaceDeletionError struct {
-	msg string
-}
-
-func (e *namespaceDeletionError) Error() string { return e.msg }
-
-// missingServiceAccountError indicates that the default ServiceAccount has not
-// yet been created, and that the chart should not be updated to avoid creating
-// pods before the ImagePullSecrets have been applied.
-type missingServiceAccountError struct {
-	msg string
-}
-
-func (e *missingServiceAccountError) Error() string { return e.msg }
-
 func (r *Reconciler) ensureNamespace(ctx context.Context, as *apps.ChartAssignment) (*core.Namespace, error) {
 	// Create application namespace if it doesn't exist.
 	var ns core.Namespace
@@ -193,27 +172,13 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, as *apps.ChartAssignme
 		return nil, fmt.Errorf("getting Namespace %q failed: %s", as.Spec.NamespaceName, err)
 	}
 	if ns.DeletionTimestamp != nil {
-		return nil, &namespaceDeletionError{
-			msg: fmt.Sprintf("namespace %q was marked for deletion at %s, skipping", as.Spec.NamespaceName, ns.DeletionTimestamp),
-		}
+		return nil, coretools.NewNamespaceDeletionError(fmt.Sprintf("namespace %q was marked for deletion at %s, skipping", as.Spec.NamespaceName, ns.DeletionTimestamp))
 	}
 
 	createNamespace := k8serrors.IsNotFound(err)
 	ns.Name = as.Spec.NamespaceName
-	ns.Labels = map[string]string{"app": as.Name}
+	setLabel(&ns.ObjectMeta, "app", as.Name)
 
-	// Add ourselves to the owners if we aren't already.
-	_true := true
-	added := setOwnerReference(&ns.ObjectMeta, meta.OwnerReference{
-		APIVersion:         as.APIVersion,
-		Kind:               as.Kind,
-		Name:               as.Name,
-		UID:                as.UID,
-		BlockOwnerDeletion: &_true,
-	})
-	if !added {
-		return &ns, nil
-	}
 	if createNamespace {
 		return &ns, r.kube.Create(ctx, &ns)
 	}
@@ -225,31 +190,26 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, as *apps.ChartAssignme
 // reference images from a private container registry.
 // TODO(ensonic): Put this behind a flag to only do this as needed.
 func (r *Reconciler) ensureServiceAccount(ctx context.Context, ns *core.Namespace, as *apps.ChartAssignment) error {
-	if r.cluster == "cloud" {
-		// We don't need any of this for cloud charts.
-		return nil
-	}
-
 	// Copy imagePullSecret from 'default' namespace, since service accounts cannot reference
 	// secrets in other namespaces.
 	var secret core.Secret
-	err := r.kube.Get(ctx, kclient.ObjectKey{Namespace: as.Spec.NamespaceName, Name: gcr.SecretName}, &secret)
+	err := r.kube.Get(ctx, kclient.ObjectKey{Namespace: as.Spec.NamespaceName, Name: coretools.ImagePullSecret}, &secret)
 	if k8serrors.IsNotFound(err) {
-		err = r.kube.Get(ctx, kclient.ObjectKey{Namespace: "default", Name: gcr.SecretName}, &secret)
+		//TODO: this should be changed when controller is running in a different namespace
+		err = r.kube.Get(ctx, kclient.ObjectKey{Namespace: "default", Name: coretools.ImagePullSecret}, &secret)
 		if k8serrors.IsNotFound(err) {
-			log.Printf("Failed to get Secret \"default:%s\" (this is expected when simulating a robot on GKE)", gcr.SecretName)
-			return nil
+			return fmt.Errorf("failed to get Secret \"default:%s\"", coretools.ImagePullSecret)
 		} else if err != nil {
-			return fmt.Errorf("getting Secret \"default:%s\" failed: %s", gcr.SecretName, err)
+			return fmt.Errorf("getting Secret \"default:%s\" failed: %s", coretools.ImagePullSecret, err)
 		}
 		// Don't reuse full metadata in created secret.
 		secret.ObjectMeta = meta.ObjectMeta{
 			Namespace: ns.Name,
-			Name:      gcr.SecretName,
+			Name:      coretools.ImagePullSecret,
 		}
 		err = r.kube.Create(ctx, &secret)
 		if err != nil {
-			return fmt.Errorf("creating Secret \"%s:%s\" failed: %s", as.Spec.NamespaceName, gcr.SecretName, err)
+			return fmt.Errorf("creating Secret \"%s:%s\" failed: %s", as.Spec.NamespaceName, coretools.ImagePullSecret, err)
 		}
 	}
 
@@ -259,15 +219,13 @@ func (r *Reconciler) ensureServiceAccount(ctx context.Context, ns *core.Namespac
 	if err != nil {
 		if k8serrors.IsNotFound(err) && time.Since(ns.CreationTimestamp.Time) < defaultServiceAccountDeadline {
 			// The Service Account Controller hasn't created the default SA yet.
-			return &missingServiceAccountError{
-				msg: fmt.Sprintf("ServiceAccount \"%s:default\" not yet created", ns.Name),
-			}
+			return coretools.NewMissingServiceAccountError(fmt.Sprintf("ServiceAccount \"%s:default\" not yet created", ns.Name))
 		}
 		return fmt.Errorf("getting ServiceAccount \"%s:default\" failed: %s", as.Spec.NamespaceName, err)
 	}
 
 	// Only add the secret once.
-	ips := core.LocalObjectReference{Name: gcr.SecretName}
+	ips := core.LocalObjectReference{Name: coretools.ImagePullSecret}
 	found := false
 	for _, s := range sa.ImagePullSecrets {
 		if s == ips {
@@ -285,7 +243,7 @@ func (r *Reconciler) reconcile(ctx context.Context, as *apps.ChartAssignment) (r
 	// If we are scheduled for deletion, delete the Synk ResourceSet and drop our
 	// finalizer so garbage collection can continue.
 	if as.DeletionTimestamp != nil {
-		log.Printf("Ensure ChartAssignment %q cleanup", as.Name)
+		log.Printf("Ensure ChartAssignment %s/%s cleanup", as.Namespace, as.Name)
 
 		if err := r.ensureDeleted(ctx, as); err != nil {
 			return reconcile.Result{}, fmt.Errorf("ensure deleted: %s", err)
@@ -299,15 +257,15 @@ func (r *Reconciler) reconcile(ctx context.Context, as *apps.ChartAssignment) (r
 
 	ns, err := r.ensureNamespace(ctx, as)
 	if err != nil {
-		if _, ok := err.(*namespaceDeletionError); ok {
-			log.Printf("Ensure namespace: %s", err)
+		if _, ok := err.(*coretools.NamespaceDeletionError); ok {
+			log.Printf("ensure namespace: %s", err)
 			// Requeue to track deletion progress.
 			return reconcile.Result{Requeue: true, RequeueAfter: requeueFast}, nil
 		}
 		return reconcile.Result{}, fmt.Errorf("ensure namespace: %s", err)
 	}
 	if err := r.ensureServiceAccount(ctx, ns, as); err != nil {
-		if _, ok := err.(*missingServiceAccountError); ok {
+		if _, ok := err.(*coretools.MissingServiceAccountError); ok {
 			log.Printf("Failed: %q. This is expected to occur rarely.", err)
 			return reconcile.Result{Requeue: true, RequeueAfter: requeueFast}, nil
 		} else {
@@ -351,7 +309,7 @@ func condition(b bool) core.ConditionStatus {
 }
 
 func (r *Reconciler) setStatus(ctx context.Context, as *apps.ChartAssignment) error {
-	status, ok := r.releases.status(as.Name)
+	status, ok := r.releases.status(as)
 	if !ok {
 		return nil
 	} else if status.phase == apps.ChartAssignmentPhaseDeleted {
@@ -411,7 +369,7 @@ func (r *Reconciler) setStatus(ctx context.Context, as *apps.ChartAssignment) er
 // ensureDeleted ensures that the Synk ResourceSet is deleted and the finalizer gets removed.
 func (r *Reconciler) ensureDeleted(ctx context.Context, as *apps.ChartAssignment) error {
 	r.releases.ensureDeleted(as)
-	status, ok := r.releases.status(as.Name)
+	status, ok := r.releases.status(as)
 	if !ok {
 		return fmt.Errorf("release status not found")
 	}
@@ -423,6 +381,21 @@ func (r *Reconciler) ensureDeleted(ctx context.Context, as *apps.ChartAssignment
 	if !stringsContain(as.Finalizers, finalizer) {
 		return nil
 	}
+
+	// Delete namespace
+	var ns core.Namespace
+	err := r.kube.Get(ctx, kclient.ObjectKey{Name: as.Spec.NamespaceName}, &ns)
+	if err != nil && !k8serrors.IsNotFound(err) {
+		return fmt.Errorf("getting Namespace %q failed: %s", as.Spec.NamespaceName, err)
+	}
+
+	if !k8serrors.IsNotFound(err) {
+		if err := r.kube.Delete(ctx, &ns); err != nil {
+			return fmt.Errorf("delete namespace failed: %s", err)
+		}
+	}
+
+	// Remove finalizer
 	as.Finalizers = stringsDelete(as.Finalizers, finalizer)
 	if err := r.kube.Update(ctx, as); err != nil {
 		return fmt.Errorf("update failed: %s", err)
@@ -446,19 +419,6 @@ func stringsDelete(list []string, s string) (res []string) {
 		}
 	}
 	return res
-}
-
-// setOwnerReference ensures the owner reference is set and returns true if it did
-// not exist before. Existing references are detected based on the UID field.
-func setOwnerReference(om *meta.ObjectMeta, ref meta.OwnerReference) bool {
-	for i, or := range om.OwnerReferences {
-		if ref.UID == or.UID {
-			om.OwnerReferences[i] = ref
-			return false
-		}
-	}
-	om.OwnerReferences = append(om.OwnerReferences, ref)
-	return true
 }
 
 // inCondition returns true if the ChartAssignment has a condition of the given
@@ -501,6 +461,13 @@ func setCondition(as *apps.ChartAssignment, t apps.ChartAssignmentConditionType,
 		Status:             v,
 		Message:            msg,
 	})
+}
+
+func setLabel(o *meta.ObjectMeta, k, v string) {
+	if o.Labels == nil {
+		o.Labels = map[string]string{}
+	}
+	o.Labels[k] = v
 }
 
 // NewValidationWebhook returns a new webhook that validates ChartAssignments.

@@ -1,0 +1,115 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: fluentd-apiserver-proxy
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: fluentd-fluentd-apiserver-proxy
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rbac-apiserver-proxy
+subjects:
+- kind: ServiceAccount
+  name: fluentd-apiserver-proxy
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: fluentd-apiserver-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: fluentd-apiserver-proxy
+  template:
+    metadata:
+      labels:
+        app: fluentd-apiserver-proxy
+      annotations:
+        # Checksum that pod restarts on config map changes
+        checksum/config: {{ include (print $.Template.BasePath "/fluentd-apiserver-proxy-config.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: fluentd-apiserver-proxy
+      containers:
+      - name: fluentd-apiserver-proxy
+        image: quay.io/brancz/kube-rbac-proxy:v0.11.0
+        args:
+          - "--insecure-listen-address=0.0.0.0:9880"
+          - "--upstream=http://fluentd-tcp.{{- .Release.Namespace -}}.svc.cluster.local:9880/"
+          - "--config-file=/etc/kube-rbac-proxy/config-file.yaml"
+          - "--logtostderr=true"
+          - "--v=4"
+        ports:
+          - containerPort: 9880
+            name: http
+        volumeMounts:
+        - name: config
+          mountPath: /etc/kube-rbac-proxy
+        securityContext:
+          allowPrivilegeEscalation: false
+      securityContext:
+        runAsUser: 65532
+        runAsGroup: 65532
+      volumes:
+      - name: config
+        configMap:
+          name: fluentd-apiserver-proxy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fluentd-apiserver-proxy
+  labels:
+    app: fluentd-apiserver-proxy
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9880
+      protocol: TCP
+      name: http
+  selector:
+    app: fluentd-apiserver-proxy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fluentd-tcp
+  labels:
+    app: fluentd-tcp
+spec:
+  type: ClusterIP
+  ports:
+    - port: 9880
+      targetPort: 9880
+      protocol: TCP
+      name: tcp
+      # appProtocol explicitly set to tcp that istio sidecar does not screw up routing based on HTTP headers
+      # manual protocol selection https://istio.io/latest/docs/ops/configuration/traffic-management/protocol-selection/
+      appProtocol: tcp
+  selector:
+    app.kubernetes.io/name: {{ default .Chart.Name .Values.fluentd.nameOverride | trunc 63 | trimSuffix "-" }}
+    app.kubernetes.io/instance: {{ .Release.Name }}
+---
+# Create permissions for a virtual subresource of the robot CRD to be validated by kube-rbac-proxy
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cloud-robotics:cr-syncer:fluentd-proxy
+  labels:
+    cr-syncer.cloudrobotics.com/aggregate-to-robot-service: "true"
+rules:
+- apiGroups:
+  - registry.cloudrobotics.com
+  resources:
+  - robots/fluentd-proxy
+  verbs:
+  - get
+  - create
+  - update
+  - patch
+  - delete

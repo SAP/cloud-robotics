@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: setup-robot-nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: setup-robot-nginx
+  template:
+    metadata:
+      labels:
+        app: setup-robot-nginx
+    spec:
+      volumes:
+      - name: nginx-configmap-volume
+        configMap:
+          name: nginx-config
+      - name: setup-robot-scripts
+        configMap:
+          name: setup-robot-scripts
+      containers:
+      - name: nginx
+        image: nginx:latest
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - mountPath: /etc/nginx/conf.d
+          name: nginx-configmap-volume
+        - mountPath: /setup-robot-scripts
+          name: setup-robot-scripts
+        resources:
+          requests:
+            memory: "16Mi"
+            cpu: "50m"
+          limits:
+            memory: "256Mi"
+            cpu: "250m"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: setup-robot-nginx
+  labels:
+    app: setup-robot-nginx
+spec:
+  type: ClusterIP
+  ports:
+  - name: http
+    port: 80
+  selector:
+    app: setup-robot-nginx
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: setup-robot-nginx
+spec:
+  hosts:
+  - setup-robot.{{ .Values.domain }}
+  gateways:
+  - {{ .Values.default_gateway }}
+  http:
+  - route:
+    - destination:
+        host: setup-robot-nginx
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+data:
+  robot-setup-scripts.conf: |-
+    server {
+       listen      80;
+       server_name  _;
+       location / {
+           root /setup-robot-scripts;
+       }
+    }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: setup-robot-scripts
+data:
+  {{- $file := .Files }}
+  {{- $var := printf "DOMAIN=\"%s\"" .Values.domain }}
+  {{- range $path, $byte := .Files.Glob "files/*" }}
+  {{- $list := $path | splitList "/"}}
+  {{- $length := len $list }}
+  {{- $last := add $length -1 }}
+  {{ index $list $last }}: |-
+    {{- range $line := $file.Lines $path }}
+    {{ $line | replace "DOMAIN=\"\"" $var }}
+    {{- end }}
+  {{- end }}

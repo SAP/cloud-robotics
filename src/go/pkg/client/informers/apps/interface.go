@@ -17,8 +17,8 @@
 package apps
 
 import (
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/client/informers/apps/v1alpha1"
-	internalinterfaces "github.com/googlecloudrobotics/core/src/go/pkg/client/informers/internalinterfaces"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/informers/apps/v1alpha1"
+	internalinterfaces "github.com/SAP/cloud-robotics/src/go/pkg/client/informers/internalinterfaces"
 )
 
 // Interface provides access to each of this group's versions.

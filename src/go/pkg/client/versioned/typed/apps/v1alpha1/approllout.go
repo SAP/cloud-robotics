@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	scheme "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned/scheme"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	scheme "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -31,7 +31,7 @@ import (
 // AppRolloutsGetter has a method to return a AppRolloutInterface.
 // A group's client should implement this interface.
 type AppRolloutsGetter interface {
-	AppRollouts() AppRolloutInterface
+	AppRollouts(namespace string) AppRolloutInterface
 }
 
 // AppRolloutInterface has methods to work with AppRollout resources.
@@ -51,12 +51,14 @@ type AppRolloutInterface interface {
 // appRollouts implements AppRolloutInterface
 type appRollouts struct {
 	client rest.Interface
+	ns     string
 }
 
 // newAppRollouts returns a AppRollouts
-func newAppRollouts(c *AppsV1alpha1Client) *appRollouts {
+func newAppRollouts(c *AppsV1alpha1Client, namespace string) *appRollouts {
 	return &appRollouts{
 		client: c.RESTClient(),
+		ns:     namespace,
 	}
 }
 
@@ -64,6 +66,7 @@ func newAppRollouts(c *AppsV1alpha1Client) *appRollouts {
 func (c *appRollouts) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.AppRollout, err error) {
 	result = &v1alpha1.AppRollout{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("approllouts").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -80,6 +83,7 @@ func (c *appRollouts) List(ctx context.Context, opts v1.ListOptions) (result *v1
 	}
 	result = &v1alpha1.AppRolloutList{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("approllouts").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -96,6 +100,7 @@ func (c *appRollouts) Watch(ctx context.Context, opts v1.ListOptions) (watch.Int
 	}
 	opts.Watch = true
 	return c.client.Get().
+		Namespace(c.ns).
 		Resource("approllouts").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -106,6 +111,7 @@ func (c *appRollouts) Watch(ctx context.Context, opts v1.ListOptions) (watch.Int
 func (c *appRollouts) Create(ctx context.Context, appRollout *v1alpha1.AppRollout, opts v1.CreateOptions) (result *v1alpha1.AppRollout, err error) {
 	result = &v1alpha1.AppRollout{}
 	err = c.client.Post().
+		Namespace(c.ns).
 		Resource("approllouts").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(appRollout).
@@ -118,6 +124,7 @@ func (c *appRollouts) Create(ctx context.Context, appRollout *v1alpha1.AppRollou
 func (c *appRollouts) Update(ctx context.Context, appRollout *v1alpha1.AppRollout, opts v1.UpdateOptions) (result *v1alpha1.AppRollout, err error) {
 	result = &v1alpha1.AppRollout{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("approllouts").
 		Name(appRollout.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -132,6 +139,7 @@ func (c *appRollouts) Update(ctx context.Context, appRollout *v1alpha1.AppRollou
 func (c *appRollouts) UpdateStatus(ctx context.Context, appRollout *v1alpha1.AppRollout, opts v1.UpdateOptions) (result *v1alpha1.AppRollout, err error) {
 	result = &v1alpha1.AppRollout{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("approllouts").
 		Name(appRollout.Name).
 		SubResource("status").
@@ -145,6 +153,7 @@ func (c *appRollouts) UpdateStatus(ctx context.Context, appRollout *v1alpha1.App
 // Delete takes name of the appRollout and deletes it. Returns an error if one occurs.
 func (c *appRollouts) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("approllouts").
 		Name(name).
 		Body(&opts).
@@ -159,6 +168,7 @@ func (c *appRollouts) DeleteCollection(ctx context.Context, opts v1.DeleteOption
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("approllouts").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -171,6 +181,7 @@ func (c *appRollouts) DeleteCollection(ctx context.Context, opts v1.DeleteOption
 func (c *appRollouts) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.AppRollout, err error) {
 	result = &v1alpha1.AppRollout{}
 	err = c.client.Patch(pt).
+		Namespace(c.ns).
 		Resource("approllouts").
 		Name(name).
 		SubResource(subresources...).

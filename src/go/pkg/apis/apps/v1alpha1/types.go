@@ -25,7 +25,8 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type ResourceSet struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec   ResourceSetSpec   `json:"spec"`
@@ -36,6 +37,7 @@ type ResourceSet struct {
 
 type ResourceSetList struct {
 	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []ResourceSet `json:"items"`
@@ -103,7 +105,8 @@ const (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type App struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
 	Spec AppSpec `json:"spec,omitempty"`
@@ -113,6 +116,7 @@ type App struct {
 
 type AppList struct {
 	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []App `json:"items"`
@@ -135,14 +139,16 @@ type AppComponent struct {
 }
 
 // +genclient
-// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type AppRollout struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   AppRolloutSpec   `json:"spec,omitempty"`
+	// +optional
+	Spec AppRolloutSpec `json:"spec,omitempty"`
+	// +optional
 	Status AppRolloutStatus `json:"status,omitempty"`
 }
 
@@ -150,6 +156,7 @@ type AppRollout struct {
 
 type AppRolloutList struct {
 	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []AppRollout `json:"items"`
@@ -203,14 +210,16 @@ const (
 )
 
 // +genclient
-// +genclient:nonNamespaced
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type ChartAssignment struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   ChartAssignmentSpec   `json:"spec,omitempty"`
+	// +optional
+	Spec ChartAssignmentSpec `json:"spec,omitempty"`
+	// +optional
 	Status ChartAssignmentStatus `json:"status,omitempty"`
 }
 
@@ -218,6 +227,7 @@ type ChartAssignment struct {
 
 type ChartAssignmentList struct {
 	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []ChartAssignment `json:"items"`

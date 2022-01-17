@@ -1,0 +1,71 @@
+# Configuration for the prometheus-operator chart.
+# Reference: https://github.com/helm/charts/blob/master/stable/prometheus-operator/values.yaml
+#
+# WARNING: the prometheus-operator chart is complicated and error-prone. If you
+# edit this file, run the following command to generate the output with `helm
+# template`, and verify that your changes have the expected effect.
+
+nameOverride: ${TENANT}-kube
+fullnameOverride: ${TENANT}-kube
+
+alertmanager:
+  enabled: false
+
+defaultRules:
+  create: false
+
+prometheus:
+  prometheusSpec:
+    # Pick up all service monitors across all namespaces.
+    serviceMonitorNamespaceSelector:
+      any: true
+    serviceMonitorSelector:
+      any: true
+    # Pick up all pod monitors across all namespaces.
+    podMonitorNamespaceSelector:
+      any: true
+    podMonitorSelector:
+      any: true
+    ruleNamespaceSelector:
+      any: true
+    retention: "3d"
+
+# Throws an invalid namespace "kube-system" error during deployment, as this is
+# trying to install resources into the kube-system namespace, which synk does
+# not support.
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeProxy:
+  enabled: false
+kubeScheduler:
+  enabled: false
+coreDns:
+  enabled: false
+
+
+# Default scraping interval is 20s and these metrics result in a large amount of data
+kubeApiServer:
+  serviceMonitor:
+    interval: 10m
+
+# Subcharts
+
+prometheus-node-exporter:
+  nameOverride: zzzgggzzzggg-prometheus-node-exporter
+  fullnameOverride: zzzgggzzzggg-prometheus-node-exporter
+  extraArgs:
+    # This is disabled by default, since it might leak memory
+    # (https://github.com/prometheus/node_exporter/blob/master/CHANGELOG.md#0160-rc1--2018-04-04)
+    - --collector.wifi
+    # Ignore more fuse filesystems
+    # https://github.com/prometheus/node_exporter/blob/master/collector/filesystem_linux.go#L33
+    - --collector.filesystem.ignored-fs-types=^(autofs|binfmt_misc|bpf|cgroup2?|configfs|debugfs|devpts|devtmpfs|fusectl|fuse\.\w*|hugetlbfs|iso9660|mqueue|nsfs|overlay|proc|procfs|pstore|rpc_pipefs|securityfs|selinuxfs|squashfs|sysfs|tracefs)$
+
+grafana:
+  enabled: false
+
+kube-state-metrics:
+  nameOverride: zzzgggzzzggg-kube-state-metrics
+  fullnameOverride: zzzgggzzzggg-kube-state-metrics

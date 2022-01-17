@@ -27,6 +27,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	pb "github.com/SAP/cloud-robotics/src/proto/http-relay"
 	"io"
 	"io/ioutil"
 	"log"
@@ -34,8 +35,6 @@ import (
 	"net/url"
 	"sync"
 	"time"
-
-	pb "github.com/googlecloudrobotics/core/src/proto/http-relay"
 
 	"github.com/cenkalti/backoff"
 	"github.com/golang/protobuf/proto"
@@ -91,8 +90,7 @@ var (
 )
 
 var (
-	ErrTimeout   = errors.New(http.StatusText(http.StatusRequestTimeout))
-	ErrForbidden = errors.New(http.StatusText(http.StatusForbidden))
+	ErrTimeout = errors.New(http.StatusText(http.StatusRequestTimeout))
 )
 
 func getRequest(remote *http.Client) (*pb.HttpRequest, error) {
@@ -118,9 +116,6 @@ func getRequest(remote *http.Client) (*pb.HttpRequest, error) {
 
 	if resp.StatusCode == http.StatusRequestTimeout {
 		return nil, ErrTimeout
-	}
-	if resp.StatusCode == http.StatusForbidden {
-		return nil, ErrForbidden
 	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("server status %s: %s", http.StatusText(resp.StatusCode), string(body))
@@ -404,8 +399,6 @@ func localProxy(remote *http.Client, local *http.Client) error {
 	if err != nil {
 		if errors.Is(err, ErrTimeout) {
 			return err
-		} else if errors.Is(err, ErrForbidden) {
-			log.Fatalf("failed to authenticate to cloud-api, restarting: %v", err)
 		} else {
 			return fmt.Errorf("failed to get request from relay: %v", err)
 		}

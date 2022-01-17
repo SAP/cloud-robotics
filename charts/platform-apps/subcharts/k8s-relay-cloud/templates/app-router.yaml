@@ -1,0 +1,126 @@
+{{ if eq .Values.k8s_service_catalog "true" }}
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ServiceInstance
+metadata:
+  name: xsuaa-kubernetes-relay
+spec:
+  clusterServiceClassExternalName: xsuaa
+  clusterServiceClassRef:
+    name: xsuaa
+  clusterServicePlanExternalName: application
+  parameters:
+    oauth2-configuration:
+      redirect-uris:
+{{ if .Values.tenant_domain }}
+      - https://k8s-relay.{{ .Values.tenant_domain }}/oauth/callback
+{{ else }}
+      - https://{{ .Values.tenant_main_namespace }}-k8s-relay.{{ .Values.domain }}/oauth/callback
+{{ end }}
+      - http://localhost:8000/oauth/callback
+    role-templates:
+    - description: Use Kubernetes-Relay
+      name: KubernetesRelay
+      scope-references:
+      - $XSAPPNAME.Edit
+    scopes:
+    - description: edit
+      name: $XSAPPNAME.Edit
+    xsappname: kubernetes-relay-{{ .Values.tenant }}
+---
+apiVersion: servicecatalog.k8s.io/v1beta1
+kind: ServiceBinding
+metadata:
+  name: xsuaa-app-auth-proxy-bind
+  labels:
+    app: app-auth-proxy
+spec:
+  instanceRef:
+    name: kubernetes-relay-{{ .Values.tenant }}
+---
+apiVersion: servicecatalog.kyma-project.io/v1alpha1
+kind: ServiceBindingUsage
+metadata:
+  name: xsuaa-app-auth-proxy-bind-usage
+  labels:
+    app: app-auth-proxy
+spec:
+  serviceBindingRef:
+    name: xsuaa-app-auth-proxy-bind
+  usedBy:
+    kind: deployment
+    name: app-auth-proxy
+  parameters:
+    envPrefix:
+      name: "IDP_"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-auth-proxy
+  labels:
+    app: app-auth-proxy
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-auth-proxy
+  template:
+    metadata:
+      labels:
+        app: app-auth-proxy
+      annotations:
+        # Checksum that pod restarts on config map changes
+        checksum/config: {{ include (print $.Template.BasePath "/app-router-config.yaml") . | sha256sum }}
+    spec:
+      containers:
+      - image: "{{ .Values.registry }}/{{ .Values.images.app_auth_proxy }}"
+        name: app-auth-proxy
+        ports:
+        - name: http
+          containerPort: 8000
+        volumeMounts:
+        - name: config-volume
+          mountPath: /config
+        env:
+        - name: IDP_clientid
+          valueFrom:
+            secretKeyRef:
+              name: xsuaa-app-auth-proxy-bind
+              key: clientid
+        - name: IDP_clientsecret
+          valueFrom:
+            secretKeyRef:
+              name: xsuaa-app-auth-proxy-bind
+              key: clientsecret
+        - name: IDP_url
+          valueFrom:
+            secretKeyRef:
+              name: xsuaa-app-auth-proxy-bind
+              key: url
+        - name: IDP_token_endpoint_auth_method
+          value: client_secret_post
+        - name: IDP_xsappname
+          valueFrom:
+            secretKeyRef:
+              name: xsuaa-app-auth-proxy-bind
+              key: xsappname
+      volumes:
+      - name: config-volume
+        configMap:
+          name: app-auth-proxy
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: app-auth-proxy
+  labels:
+    app: app-auth-proxy
+spec:
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8000
+      protocol: TCP
+  selector:
+    app: app-auth-proxy
+{{ end }}

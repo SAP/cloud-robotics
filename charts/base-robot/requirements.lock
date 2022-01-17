@@ -1,0 +1,9 @@
+dependencies:
+- name: fluent-bit
+  repository: https://fluent.github.io/helm-charts
+  version: 0.18.1
+- name: base-crds
+  repository: file://../base-crds
+  version: 0.1.0
+digest: sha256:778699b8c068b9e814e66d4deffd0807503b6b5be28207ad9f3e5f77d02d4171
+generated: "2022-01-17T12:01:20.534359+01:00"

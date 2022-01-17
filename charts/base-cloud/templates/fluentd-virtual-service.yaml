@@ -1,0 +1,16 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: fluentd-apiserver-proxy
+spec:
+  hosts:
+  - fluentd.{{ .Values.domain }}
+  gateways:
+  - {{ .Values.default_gateway }}
+  http:
+  - name: fluentd-robot
+    route:
+    - destination:
+        port:
+          number: 9880
+        host: fluentd-apiserver-proxy

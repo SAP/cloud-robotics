@@ -153,7 +153,7 @@ func getStorageVersionIndex(crd crdtypes.CustomResourceDefinition) (int, error) 
 			return ix, nil
 		}
 	}
-	return 0, fmt.Errorf("Invalid Custom Resource %s: no version with stored=true set", crd.ObjectMeta.Name)
+	return 0, fmt.Errorf("invalid Custom Resource %s: no version with stored=true set", crd.ObjectMeta.Name)
 }
 
 func newCRSyncer(
@@ -188,7 +188,7 @@ func newCRSyncer(
 	ns := ""
 	if crd.Spec.Scope == crdtypes.NamespaceScoped {
 		// TODO(https://github.com/googlecloudrobotics/core/issues/19): allow syncing CRs in other namespaces
-		ns = "default"
+		ns = *namespace
 	}
 	s := &crSyncer{
 		ctx:        ctx,
@@ -449,14 +449,14 @@ func (s *crSyncer) syncDownstream(key string) error {
 	} else if src.Object["status"] != nil {
 		srcStatus, ok := src.Object["status"].(map[string]interface{})
 		if !ok {
-			return fmt.Errorf("Expected status of %s in downstream cluster to be a dict", src.GetName())
+			return fmt.Errorf("expected status of %s in downstream cluster to be a dict", src.GetName())
 		}
 		if dst.Object["status"] == nil {
 			dst.Object["status"] = make(map[string]interface{})
 		}
 		dstStatus, ok := dst.Object["status"].(map[string]interface{})
 		if !ok {
-			return fmt.Errorf("Expected status of %s in upstream cluster to be a dict", src.GetName())
+			return fmt.Errorf("expected status of %s in upstream cluster to be a dict", src.GetName())
 		}
 		if srcStatus[s.subtree] != nil {
 			dstStatus[s.subtree] = srcStatus[s.subtree]
@@ -507,8 +507,8 @@ func (s *crSyncer) syncDownstream(key string) error {
 // deletions.
 func (s *crSyncer) syncUpstream(key string) error {
 	// Get the upstream spec (src) and downstream status (dst).
-	src := &unstructured.Unstructured{make(map[string]interface{})}
-	dst := &unstructured.Unstructured{make(map[string]interface{})}
+	src := &unstructured.Unstructured{Object: make(map[string]interface{})}
+	dst := &unstructured.Unstructured{Object: make(map[string]interface{})}
 	srcObj, srcExists, err := s.upstreamInf.GetIndexer().GetByKey(key)
 	if err != nil {
 		return fmt.Errorf("failed to retrieve resource for key %s: %s", key, err)

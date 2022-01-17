@@ -79,6 +79,7 @@ import (
 	"encoding/hex"
 	"flag"
 	"fmt"
+	pb "github.com/SAP/cloud-robotics/src/proto/http-relay"
 	"io/ioutil"
 	"log"
 	"math/rand"
@@ -86,8 +87,6 @@ import (
 	"net/url"
 	"strings"
 	"time"
-
-	pb "github.com/googlecloudrobotics/core/src/proto/http-relay"
 
 	"github.com/golang/protobuf/proto"
 	servertiming "github.com/mitchellh/go-server-timing"
@@ -100,7 +99,6 @@ const (
 
 var (
 	port      = flag.Int("port", 80, "Port number to listen on")
-	projectId = flag.String("project_id", "", "Cloud project for IAM checks")
 	blockSize = flag.Int("block_size", 10*1024,
 		"Size of i/o buffer in bytes")
 	serverTimings = flag.Bool("server_timings", false,

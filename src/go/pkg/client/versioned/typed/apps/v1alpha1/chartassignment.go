@@ -20,8 +20,8 @@ import (
 	"context"
 	"time"
 
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	scheme "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned/scheme"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	scheme "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/scheme"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	types "k8s.io/apimachinery/pkg/types"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -31,7 +31,7 @@ import (
 // ChartAssignmentsGetter has a method to return a ChartAssignmentInterface.
 // A group's client should implement this interface.
 type ChartAssignmentsGetter interface {
-	ChartAssignments() ChartAssignmentInterface
+	ChartAssignments(namespace string) ChartAssignmentInterface
 }
 
 // ChartAssignmentInterface has methods to work with ChartAssignment resources.
@@ -51,12 +51,14 @@ type ChartAssignmentInterface interface {
 // chartAssignments implements ChartAssignmentInterface
 type chartAssignments struct {
 	client rest.Interface
+	ns     string
 }
 
 // newChartAssignments returns a ChartAssignments
-func newChartAssignments(c *AppsV1alpha1Client) *chartAssignments {
+func newChartAssignments(c *AppsV1alpha1Client, namespace string) *chartAssignments {
 	return &chartAssignments{
 		client: c.RESTClient(),
+		ns:     namespace,
 	}
 }
 
@@ -64,6 +66,7 @@ func newChartAssignments(c *AppsV1alpha1Client) *chartAssignments {
 func (c *chartAssignments) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ChartAssignment, err error) {
 	result = &v1alpha1.ChartAssignment{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("chartassignments").
 		Name(name).
 		VersionedParams(&options, scheme.ParameterCodec).
@@ -80,6 +83,7 @@ func (c *chartAssignments) List(ctx context.Context, opts v1.ListOptions) (resul
 	}
 	result = &v1alpha1.ChartAssignmentList{}
 	err = c.client.Get().
+		Namespace(c.ns).
 		Resource("chartassignments").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -96,6 +100,7 @@ func (c *chartAssignments) Watch(ctx context.Context, opts v1.ListOptions) (watc
 	}
 	opts.Watch = true
 	return c.client.Get().
+		Namespace(c.ns).
 		Resource("chartassignments").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -106,6 +111,7 @@ func (c *chartAssignments) Watch(ctx context.Context, opts v1.ListOptions) (watc
 func (c *chartAssignments) Create(ctx context.Context, chartAssignment *v1alpha1.ChartAssignment, opts v1.CreateOptions) (result *v1alpha1.ChartAssignment, err error) {
 	result = &v1alpha1.ChartAssignment{}
 	err = c.client.Post().
+		Namespace(c.ns).
 		Resource("chartassignments").
 		VersionedParams(&opts, scheme.ParameterCodec).
 		Body(chartAssignment).
@@ -118,6 +124,7 @@ func (c *chartAssignments) Create(ctx context.Context, chartAssignment *v1alpha1
 func (c *chartAssignments) Update(ctx context.Context, chartAssignment *v1alpha1.ChartAssignment, opts v1.UpdateOptions) (result *v1alpha1.ChartAssignment, err error) {
 	result = &v1alpha1.ChartAssignment{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("chartassignments").
 		Name(chartAssignment.Name).
 		VersionedParams(&opts, scheme.ParameterCodec).
@@ -132,6 +139,7 @@ func (c *chartAssignments) Update(ctx context.Context, chartAssignment *v1alpha1
 func (c *chartAssignments) UpdateStatus(ctx context.Context, chartAssignment *v1alpha1.ChartAssignment, opts v1.UpdateOptions) (result *v1alpha1.ChartAssignment, err error) {
 	result = &v1alpha1.ChartAssignment{}
 	err = c.client.Put().
+		Namespace(c.ns).
 		Resource("chartassignments").
 		Name(chartAssignment.Name).
 		SubResource("status").
@@ -145,6 +153,7 @@ func (c *chartAssignments) UpdateStatus(ctx context.Context, chartAssignment *v1
 // Delete takes name of the chartAssignment and deletes it. Returns an error if one occurs.
 func (c *chartAssignments) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("chartassignments").
 		Name(name).
 		Body(&opts).
@@ -159,6 +168,7 @@ func (c *chartAssignments) DeleteCollection(ctx context.Context, opts v1.DeleteO
 		timeout = time.Duration(*listOpts.TimeoutSeconds) * time.Second
 	}
 	return c.client.Delete().
+		Namespace(c.ns).
 		Resource("chartassignments").
 		VersionedParams(&listOpts, scheme.ParameterCodec).
 		Timeout(timeout).
@@ -171,6 +181,7 @@ func (c *chartAssignments) DeleteCollection(ctx context.Context, opts v1.DeleteO
 func (c *chartAssignments) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ChartAssignment, err error) {
 	result = &v1alpha1.ChartAssignment{}
 	err = c.client.Patch(pt).
+		Namespace(c.ns).
 		Resource("chartassignments").
 		Name(name).
 		SubResource(subresources...).

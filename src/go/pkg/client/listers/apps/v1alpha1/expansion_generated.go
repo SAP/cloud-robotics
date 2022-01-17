@@ -24,9 +24,17 @@ type AppListerExpansion interface{}
 // AppRolloutLister.
 type AppRolloutListerExpansion interface{}
 
+// AppRolloutNamespaceListerExpansion allows custom methods to be added to
+// AppRolloutNamespaceLister.
+type AppRolloutNamespaceListerExpansion interface{}
+
 // ChartAssignmentListerExpansion allows custom methods to be added to
 // ChartAssignmentLister.
 type ChartAssignmentListerExpansion interface{}
+
+// ChartAssignmentNamespaceListerExpansion allows custom methods to be added to
+// ChartAssignmentNamespaceLister.
+type ChartAssignmentNamespaceListerExpansion interface{}
 
 // ResourceSetListerExpansion allows custom methods to be added to
 // ResourceSetLister.

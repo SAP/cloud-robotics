@@ -118,15 +118,8 @@ func (pr *PrefixingRoundtripper) RoundTrip(r *http.Request) (*http.Response, err
 // project.
 func BuildCloudKubernetesConfig(ts oauth2.TokenSource, remoteServer string) *rest.Config {
 	return &rest.Config{
-		Host:    remoteServer,
-		APIPath: "/apis",
-		WrapTransport: func(base http.RoundTripper) http.RoundTripper {
-			rt := &PrefixingRoundtripper{
-				Prefix: "/apis/core.kubernetes",
-				Base:   &oauth2.Transport{Source: ts, Base: base},
-			}
-			return rt
-		},
+		Host:      fmt.Sprintf("https://%s", remoteServer),
+		Transport: &oauth2.Transport{Source: ts},
 	}
 }
 

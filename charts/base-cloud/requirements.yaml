@@ -1,0 +1,14 @@
+
+dependencies:
+- name: base-crds
+  version: "0.1.0"
+  repository: "file://../base-crds"
+- name: cert-manager
+  version: "1.6.1"
+  repository: "https://charts.jetstack.io"
+- name: fluentd
+  version: "0.3.3"
+  repository: "https://fluent.github.io/helm-charts"
+- name: fluent-bit
+  version: "0.19.14"
+  repository: "https://fluent.github.io/helm-charts"

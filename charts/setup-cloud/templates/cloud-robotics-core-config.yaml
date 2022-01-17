@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cloud-robotics-core-config
+data:
+    domain: "{{ .Values.domain }}"
+    ingress_ip: "{{ .Values.ingress_ip }}"
+    deploy_environment: "{{ .Values.deploy_environment }}"
+    registry: "{{ .Values.registry }}"
+    cloud_logging: "{{ .Values.cloud_logging }}"
+    stackdriver_logging: "{{ .Values.stackdriver_logging }}"
+    default_gateway: "{{ .Values.default_gateway }}"
+    k8s_gateway_tls: "{{ .Values.k8s_gateway_tls }}"
+    k8s_service_catalog: "{{ .Values.k8s_service_catalog }}"

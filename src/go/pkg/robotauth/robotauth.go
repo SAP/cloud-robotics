@@ -26,9 +26,8 @@ import (
 	"path/filepath"
 	"time"
 
-	"github.com/googlecloudrobotics/core/src/go/pkg/kubeutils"
+	"github.com/SAP/cloud-robotics/src/go/pkg/kubeutils"
 	"golang.org/x/oauth2"
-	"golang.org/x/oauth2/jwt"
 )
 
 const (
@@ -38,11 +37,9 @@ const (
 
 // Object containing ID, as stored in robot-id.json.
 type RobotAuth struct {
-	RobotName           string `json:"id"`
-	ProjectId           string `json:"project_id"`
-	PublicKeyRegistryId string `json:"public_key_registry_id"`
-	PrivateKey          []byte `json:"private_key"`
-	Domain              string `json:"domain"`
+	RobotName         string `json:"id"`
+	Domain            string `json:"domain"`
+	UpstreamAuthToken string `json:"upstream_auth_token"`
 }
 
 func filename() string {
@@ -89,21 +86,14 @@ func (r *RobotAuth) StoreInFile() error {
 	return nil
 }
 
-func (r *RobotAuth) getTokenEndpoint() string {
-	return fmt.Sprintf("https://%s/apis/core.token-vendor/v1/token.oauth2", r.Domain)
-}
-
-// CreateRobotTokenSource creates an OAuth2 token source for the token vendor.
-// This token source returns Google Cloud access token minted for the robot-service@
-// service account.
+// CreateRobotTokenSource creates an OAuth2 token source for robot service account token.
+// It provides access to the robot-service service account in upstream Kyma cluster.
 func (r *RobotAuth) CreateRobotTokenSource(ctx context.Context) oauth2.TokenSource {
-	c := jwt.Config{
-		Email:      r.PublicKeyRegistryId, // Will be used as "issuer" of the outgoing JWT.
-		Expires:    time.Minute * 30,
-		PrivateKey: r.PrivateKey,
-		Scopes:     []string{r.getTokenEndpoint()},
-		Subject:    r.RobotName,
-		TokenURL:   r.getTokenEndpoint(),
-	}
-	return c.TokenSource(ctx)
+	// Use service account token source. Currently the token does not expire
+	s := oauth2.StaticTokenSource(&oauth2.Token{
+		AccessToken: r.UpstreamAuthToken,
+		TokenType:   "Bearer",
+		Expiry:      time.Date(10000, time.January, 1, 0, 0, 0, 0, time.UTC),
+	})
+	return s
 }

@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/labels"
 	"k8s.io/client-go/tools/cache"
@@ -29,9 +29,8 @@ type ChartAssignmentLister interface {
 	// List lists all ChartAssignments in the indexer.
 	// Objects returned here must be treated as read-only.
 	List(selector labels.Selector) (ret []*v1alpha1.ChartAssignment, err error)
-	// Get retrieves the ChartAssignment from the index for a given name.
-	// Objects returned here must be treated as read-only.
-	Get(name string) (*v1alpha1.ChartAssignment, error)
+	// ChartAssignments returns an object that can list and get ChartAssignments.
+	ChartAssignments(namespace string) ChartAssignmentNamespaceLister
 	ChartAssignmentListerExpansion
 }
 
@@ -53,9 +52,41 @@ func (s *chartAssignmentLister) List(selector labels.Selector) (ret []*v1alpha1.
 	return ret, err
 }
 
-// Get retrieves the ChartAssignment from the index for a given name.
-func (s *chartAssignmentLister) Get(name string) (*v1alpha1.ChartAssignment, error) {
-	obj, exists, err := s.indexer.GetByKey(name)
+// ChartAssignments returns an object that can list and get ChartAssignments.
+func (s *chartAssignmentLister) ChartAssignments(namespace string) ChartAssignmentNamespaceLister {
+	return chartAssignmentNamespaceLister{indexer: s.indexer, namespace: namespace}
+}
+
+// ChartAssignmentNamespaceLister helps list and get ChartAssignments.
+// All objects returned here must be treated as read-only.
+type ChartAssignmentNamespaceLister interface {
+	// List lists all ChartAssignments in the indexer for a given namespace.
+	// Objects returned here must be treated as read-only.
+	List(selector labels.Selector) (ret []*v1alpha1.ChartAssignment, err error)
+	// Get retrieves the ChartAssignment from the indexer for a given namespace and name.
+	// Objects returned here must be treated as read-only.
+	Get(name string) (*v1alpha1.ChartAssignment, error)
+	ChartAssignmentNamespaceListerExpansion
+}
+
+// chartAssignmentNamespaceLister implements the ChartAssignmentNamespaceLister
+// interface.
+type chartAssignmentNamespaceLister struct {
+	indexer   cache.Indexer
+	namespace string
+}
+
+// List lists all ChartAssignments in the indexer for a given namespace.
+func (s chartAssignmentNamespaceLister) List(selector labels.Selector) (ret []*v1alpha1.ChartAssignment, err error) {
+	err = cache.ListAllByNamespace(s.indexer, s.namespace, selector, func(m interface{}) {
+		ret = append(ret, m.(*v1alpha1.ChartAssignment))
+	})
+	return ret, err
+}
+
+// Get retrieves the ChartAssignment from the indexer for a given namespace and name.
+func (s chartAssignmentNamespaceLister) Get(name string) (*v1alpha1.ChartAssignment, error) {
+	obj, exists, err := s.indexer.GetByKey(s.namespace + "/" + name)
 	if err != nil {
 		return nil, err
 	}

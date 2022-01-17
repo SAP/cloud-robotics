@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/base64"
+	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
@@ -26,8 +27,8 @@ import (
 	"strings"
 	"sync"
 
-	apps "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	"github.com/googlecloudrobotics/core/src/go/pkg/synk"
+	apps "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	"github.com/SAP/cloud-robotics/src/go/pkg/synk"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
@@ -82,9 +83,15 @@ type releaseStatus struct {
 	retry bool  // whether deployment should be retried.
 }
 
+// create release name for a chart assignment
+func releaseName(as *apps.ChartAssignment) string {
+	return fmt.Sprintf("%s.%s", as.Namespace, as.Name)
+}
+
 // status returns the current phase and error of the release. ok is false
 // if the release does not exist in the cache.
-func (rs *releases) status(name string) (releaseStatus, bool) {
+func (rs *releases) status(as *apps.ChartAssignment) (releaseStatus, bool) {
+	name := releaseName(as)
 	rs.mtx.Lock()
 	r, ok := rs.m[name]
 	rs.mtx.Unlock()
@@ -97,7 +104,8 @@ func (rs *releases) status(name string) (releaseStatus, bool) {
 }
 
 // add a release to the cache with an initial phase.
-func (rs *releases) add(name string) *release {
+func (rs *releases) add(as *apps.ChartAssignment) *release {
+	name := releaseName(as)
 	rs.mtx.Lock()
 	defer rs.mtx.Unlock()
 
@@ -122,8 +130,8 @@ func (rs *releases) add(name string) *release {
 // ResourceSet.
 // It returns true if it could initiate an update successfully.
 func (rs *releases) ensureUpdated(as *apps.ChartAssignment) bool {
-	r := rs.add(as.Name)
-	status, _ := rs.status(as.Name)
+	r := rs.add(as)
+	status, _ := rs.status(as)
 
 	// If the last generation we deployed matches the provided one, there's
 	// nothing to do. Unless the previous update set the retry flag due to
@@ -144,7 +152,7 @@ func (rs *releases) ensureUpdated(as *apps.ChartAssignment) bool {
 // ensureDeleted ensures that deletion of the release is run.
 // It returns true if it could initiate deletion successfully.
 func (rs *releases) ensureDeleted(as *apps.ChartAssignment) bool {
-	r := rs.add(as.Name)
+	r := rs.add(as)
 	asCopy := as.DeepCopy()
 	return r.start(func() { r.delete(asCopy) })
 }
@@ -200,7 +208,7 @@ func (r *release) delete(as *apps.ChartAssignment) {
 	r.setPhase(apps.ChartAssignmentPhaseDeleting)
 	r.recorder.Event(as, core.EventTypeNormal, "DeleteChart", "deleting chart")
 
-	if err := r.synk.Delete(context.Background(), as.Name); err != nil {
+	if err := r.synk.Delete(context.Background(), releaseName(as)); err != nil {
 		r.recorder.Event(as, core.EventTypeWarning, "Failure", err.Error())
 		r.setFailed(errors.Wrap(err, "delete release"), synk.IsTransientErr(err))
 	}
@@ -236,7 +244,7 @@ func (r *release) update(as *apps.ChartAssignment) {
 				r.GetName(), msg)
 		},
 	}
-	_, err = r.synk.Apply(context.Background(), as.Name, opts, resources...)
+	_, err = r.synk.Apply(context.Background(), releaseName(as), opts, resources...)
 	if err != nil {
 		r.recorder.Event(as, core.EventTypeWarning, "Failure", err.Error())
 		r.setFailed(err, synk.IsTransientErr(err))

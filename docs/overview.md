@@ -37,15 +37,10 @@ Layer 0 is an on-robot Kubernetes setup optimized for single-node clusters. It l
 containerized workloads onto the robot, run them on one or more compute nodes and manage associated
 resources like configuration settings or networking without the overhead of a VM.
 
-You can try it out by following the [Running a ROS node as a Kubernetes deployment](how-to/running-ros-node)
-How-to Guide.
-
 ### Layer 1: Robot Fleet Connectivity and Security
 
 Layer 1 provides secure communication and access control. Every robot is identified by a unique
-keypair. The public key is managed in a [Cloud IoT device registry](https://cloud.google.com/iot/docs/concepts/devices).
-A cloud-based authorization service uses these keys to authenticate robots and generate short-lived
-OAuth access tokens.
+keypair. The public key is managed in a [Kubernetes Service Account API Token](https://kubernetes.io/docs/reference/access-authn-authz/service-accounts-admin/#to-create-additional-api-tokens).
 
 This approach follows the [BeyondCorp](https://cloud.google.com/beyondcorp/) zero trust network
 model: all connections are authenticated and authorized individually, without a need for a

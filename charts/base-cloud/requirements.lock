@@ -1,0 +1,15 @@
+dependencies:
+- name: base-crds
+  repository: file://../base-crds
+  version: 0.1.0
+- name: cert-manager
+  repository: https://charts.jetstack.io
+  version: v1.6.1
+- name: fluentd
+  repository: https://fluent.github.io/helm-charts
+  version: 0.3.3
+- name: fluent-bit
+  repository: https://fluent.github.io/helm-charts
+  version: 0.19.14
+digest: sha256:862098e4a1434a93bf1cd10eb66b96c8877f3f6fa814a1d67a890435af26f3c8
+generated: "2021-12-21T00:43:21.362421+01:00"

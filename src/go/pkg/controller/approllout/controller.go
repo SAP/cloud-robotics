@@ -25,8 +25,10 @@ import (
 	"strings"
 	"time"
 
-	apps "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	registry "github.com/googlecloudrobotics/core/src/go/pkg/apis/registry/v1alpha1"
+	apps "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	config "github.com/SAP/cloud-robotics/src/go/pkg/apis/config/v1alpha1"
+	registry "github.com/SAP/cloud-robotics/src/go/pkg/apis/registry/v1alpha1"
+	"github.com/SAP/cloud-robotics/src/go/pkg/coretools"
 	"github.com/pkg/errors"
 	core "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
@@ -114,8 +116,8 @@ func Add(ctx context.Context, mgr manager.Manager, baseValues chartutil.Values) 
 		// so the robot ideally reappeared before we reconcile.
 		&handler.Funcs{
 			CreateFunc: func(e event.CreateEvent, q workqueue.RateLimitingInterface) {
-				log.Printf("AppRollout controller received create event for Robot %q", e.Object.GetName())
-				r.enqueueAll(ctx, q)
+				log.Printf("AppRollout controller received create event for Robot %s/%s", e.Object.GetNamespace(), e.Object.GetName())
+				r.enqueueAllInNamespace(ctx, e.Object.GetNamespace(), q)
 			},
 			UpdateFunc: func(e event.UpdateEvent, q workqueue.RateLimitingInterface) {
 				// Robots don't have the status subresource enabled. Filter updates that didn't
@@ -123,14 +125,14 @@ func Add(ctx context.Context, mgr manager.Manager, baseValues chartutil.Values) 
 				change := !reflect.DeepEqual(e.ObjectOld.GetLabels(), e.ObjectNew.GetLabels())
 				change = change || e.ObjectOld.GetName() != e.ObjectNew.GetName()
 				if change {
-					log.Printf("AppRollout controller received update event for Robot %q", e.ObjectNew.GetName())
-					r.enqueueAll(ctx, q)
+					log.Printf("AppRollout controller received update event for Robot %s/%s", e.ObjectNew.GetNamespace(), e.ObjectNew.GetName())
+					r.enqueueAllInNamespace(ctx, e.ObjectNew.GetNamespace(), q)
 				}
 			},
 			DeleteFunc: func(e event.DeleteEvent, q workqueue.RateLimitingInterface) {
-				log.Printf("AppRollout controller received delete event for Robot %q", e.Object.GetName())
+				log.Printf("AppRollout controller received delete event for Robot %s/%s", e.Object.GetNamespace(), e.Object.GetName())
 				time.AfterFunc(3*time.Second, func() {
-					r.enqueueAll(ctx, q)
+					r.enqueueAllInNamespace(ctx, e.Object.GetNamespace(), q)
 				})
 			},
 		},
@@ -171,7 +173,7 @@ func (r *Reconciler) enqueueForApp(ctx context.Context, m metav1.Object, q workq
 	}
 	for _, ar := range rollouts.Items {
 		q.Add(reconcile.Request{
-			NamespacedName: types.NamespacedName{Name: ar.Name},
+			NamespacedName: types.NamespacedName{Name: ar.Name, Namespace: ar.Namespace},
 		})
 	}
 }
@@ -182,7 +184,7 @@ func (r *Reconciler) enqueueForOwner(m metav1.Object, q workqueue.RateLimitingIn
 	for _, or := range m.GetOwnerReferences() {
 		if or.APIVersion == "apps.cloudrobotics.com/v1alpha1" && or.Kind == "AppRollout" {
 			q.Add(reconcile.Request{
-				types.NamespacedName{Name: or.Name},
+				NamespacedName: types.NamespacedName{Name: or.Name, Namespace: m.GetNamespace()},
 			})
 		}
 	}
@@ -198,7 +200,22 @@ func (r *Reconciler) enqueueAll(ctx context.Context, q workqueue.RateLimitingInt
 	}
 	for _, ar := range rollouts.Items {
 		q.Add(reconcile.Request{
-			NamespacedName: types.NamespacedName{Name: ar.Name},
+			NamespacedName: types.NamespacedName{Name: ar.Name, Namespace: ar.Namespace},
+		})
+	}
+}
+
+// enqueueAll enqueues all AppRollouts.
+func (r *Reconciler) enqueueAllInNamespace(ctx context.Context, namespace string, q workqueue.RateLimitingInterface) {
+	var rollouts apps.AppRolloutList
+	err := r.kube.List(ctx, &rollouts, kclient.InNamespace(namespace))
+	if err != nil {
+		log.Printf("List AppRollouts failed: %s", err)
+		return
+	}
+	for _, ar := range rollouts.Items {
+		q.Add(reconcile.Request{
+			NamespacedName: types.NamespacedName{Name: ar.Name, Namespace: ar.Namespace},
 		})
 	}
 }
@@ -224,13 +241,14 @@ func (r *Reconciler) Reconcile(ctx context.Context, req reconcile.Request) (reco
 }
 
 func (r *Reconciler) reconcile(ctx context.Context, ar *apps.AppRollout) (reconcile.Result, error) {
-	log.Printf("Reconcile AppRollout %q (version: %s)", ar.Name, ar.ResourceVersion)
+	log.Printf("Reconcile AppRollout %s/%s (version: %s)", ar.Namespace, ar.Name, ar.ResourceVersion)
 
 	// Apply spec.
 	var (
 		app    apps.App
 		curCAs apps.ChartAssignmentList
 		robots registry.RobotList
+		tenant config.Tenant
 	)
 	ar.Status.ObservedGeneration = ar.Generation
 	ar.Status.Assignments = 0
@@ -246,13 +264,22 @@ func (r *Reconciler) reconcile(ctx context.Context, ar *apps.AppRollout) (reconc
 	if err != nil {
 		return reconcile.Result{}, errors.Wrapf(err, "list ChartAssignments for owner UID %s", ar.UID)
 	}
+	tenantName := strings.TrimPrefix(ar.Namespace, coretools.TenantPrefix)
+	err = r.kube.Get(ctx, kclient.ObjectKey{Name: tenantName}, &tenant)
+	if k8serrors.IsNotFound(err) && ar.Namespace == metav1.NamespaceDefault {
+		log.Printf("AppRollout %s is in default namespace. No tenant information added", ar.Name)
+	} else if k8serrors.IsNotFound(err) {
+		return reconcile.Result{}, errors.Errorf("Tenant %s not found", tenantName)
+	} else if err != nil {
+		return reconcile.Result{}, errors.Wrap(err, "get Tenant")
+	}
 	// NOTE(freinartz): consider pushing this down to generateChartAssignments
 	// and passing the robot selectors directly to the client.
-	if err := r.kube.List(ctx, &robots); err != nil {
+	if err := r.kube.List(ctx, &robots, kclient.InNamespace(ar.Namespace)); err != nil {
 		return reconcile.Result{}, errors.Wrap(err, "list all Robots")
 	}
 
-	wantCAs, err := generateChartAssignments(&app, ar, robots.Items, r.baseValues)
+	wantCAs, err := generateChartAssignments(&app, ar, &tenant, robots.Items, r.baseValues)
 	if err != nil {
 		if _, ok := errors.Cause(err).(errRobotSelectorOverlap); ok {
 			return reconcile.Result{}, r.updateErrorStatus(ctx, ar, err.Error())
@@ -284,9 +311,9 @@ func (r *Reconciler) reconcile(ctx context.Context, ar *apps.AppRollout) (reconc
 
 		if !exists {
 			if err := r.kube.Create(ctx, ca); err != nil {
-				return reconcile.Result{}, errors.Wrapf(err, "create ChartAssignment %q", ca.Name)
+				return reconcile.Result{}, errors.Wrapf(err, "create ChartAssignment %s/%s", ca.Namespace, ca.Name)
 			}
-			log.Printf("Created ChartAssignment %q", ca.Name)
+			log.Printf("Created ChartAssignment %s/%s", ca.Namespace, ca.Name)
 			continue
 		}
 		if changed, err := chartAssignmentChanged(&prev, ca); err != nil {
@@ -296,16 +323,16 @@ func (r *Reconciler) reconcile(ctx context.Context, ar *apps.AppRollout) (reconc
 		}
 		ca.ResourceVersion = prev.ResourceVersion
 		if err := r.kube.Update(ctx, ca); err != nil {
-			return reconcile.Result{}, errors.Wrapf(err, "update ChartAssignment %q", ca.Name)
+			return reconcile.Result{}, errors.Wrapf(err, "update ChartAssignment %s/%s", ca.Namespace, ca.Name)
 		}
 		log.Printf("Updated ChartAssignment %q", ca.Name)
 	}
 	// Delete obsolete assignments.
 	for _, ca := range dropCAs {
 		if err := r.kube.Delete(ctx, &ca); err != nil {
-			return reconcile.Result{}, errors.Wrapf(err, "delete ChartAssignment %q", ca.Name)
+			return reconcile.Result{}, errors.Wrapf(err, "delete ChartAssignment %s/%s", ca.Namespace, ca.Name)
 		}
-		log.Printf("Deleted ChartAssignment %q", ca.Name)
+		log.Printf("Deleted ChartAssignment %s/%s", ca.Namespace, ca.Name)
 	}
 
 	setStatus(ar, len(wantCAs), curCAs.Items)
@@ -413,6 +440,7 @@ func (r errRobotSelectorOverlap) Error() string {
 func generateChartAssignments(
 	app *apps.App,
 	rollout *apps.AppRollout,
+	tenant *config.Tenant,
 	allRobots []registry.Robot,
 	baseValues chartutil.Values,
 ) ([]*apps.ChartAssignment, error) {
@@ -438,7 +466,7 @@ func generateChartAssignments(
 			selectedRobots[r.Name] = r
 
 			if comps.Robot.Name != "" || comps.Robot.Inline != "" {
-				cas = append(cas, newRobotChartAssignment(r, app, rollout, &rcomp, baseValues))
+				cas = append(cas, newRobotChartAssignment(r, app, rollout, tenant, &rcomp, baseValues))
 			}
 		}
 	}
@@ -452,7 +480,7 @@ func generateChartAssignments(
 		sort.Slice(robots, func(i, j int) bool {
 			return robots[i].Name < robots[j].Name
 		})
-		cas = append(cas, newCloudChartAssignment(app, rollout, baseValues, robots...))
+		cas = append(cas, newCloudChartAssignment(app, rollout, tenant, baseValues, robots...))
 	}
 	sort.Slice(cas, func(i, j int) bool {
 		return cas[i].Name < cas[j].Name
@@ -466,12 +494,14 @@ func generateChartAssignments(
 func newCloudChartAssignment(
 	app *apps.App,
 	rollout *apps.AppRollout,
+	tenant *config.Tenant,
 	values chartutil.Values,
 	robots ...*registry.Robot,
 ) *apps.ChartAssignment {
 	ca := newBaseChartAssignment(app, rollout, &app.Spec.Components.Cloud)
 
 	ca.Name = chartAssignmentName(rollout.Name, compTypeCloud, "")
+	ca.Namespace = rollout.Namespace
 	ca.Spec.ClusterName = "cloud"
 
 	// Generate robot values list that's injected into the cloud chart.
@@ -485,6 +515,13 @@ func newCloudChartAssignment(
 	vals.MergeInto(values)
 	vals.MergeInto(chartutil.Values(rollout.Spec.Cloud.Values))
 	vals.MergeInto(chartutil.Values{"robots": robotValuesList})
+	if tenant.Name != "" {
+		vals.MergeInto(chartutil.Values{"tenant": tenant.Name})
+		vals.MergeInto(chartutil.Values{"tenant_gateway": tenant.Status.Gateway})
+		vals.MergeInto(chartutil.Values{"tenant_domain": tenant.Status.TenantDomain})
+		vals.MergeInto(chartutil.Values{"tenant_namespaces": tenant.Status.TenantNamespaces})
+		vals.MergeInto(chartutil.Values{"tenant_main_namespace": coretools.TenantMainNamespace(tenant.Name)})
+	}
 
 	ca.Spec.Chart.Values = apps.ConfigValues(vals)
 
@@ -497,12 +534,14 @@ func newRobotChartAssignment(
 	robot *registry.Robot,
 	app *apps.App,
 	rollout *apps.AppRollout,
+	tenant *config.Tenant,
 	spec *apps.AppRolloutSpecRobot,
 	values chartutil.Values,
 ) *apps.ChartAssignment {
 	ca := newBaseChartAssignment(app, rollout, &app.Spec.Components.Robot)
 
 	ca.Name = chartAssignmentName(rollout.Name, compTypeRobot, robot.Name)
+	ca.Namespace = rollout.Namespace
 	setLabel(&ca.ObjectMeta, labelRobotName, robot.Name)
 
 	ca.Spec.ClusterName = robot.Name
@@ -514,6 +553,12 @@ func newRobotChartAssignment(
 	vals.MergeInto(values)
 	vals.MergeInto(chartutil.Values(spec.Values))
 	vals.MergeInto(chartutil.Values{"robot": robotValues{Name: robot.Name}})
+	if tenant.Name != "" {
+		vals.MergeInto(chartutil.Values{"tenant": tenant.Name})
+		vals.MergeInto(chartutil.Values{"tenant_domain": tenant.Status.TenantDomain})
+		vals.MergeInto(chartutil.Values{"tenant_namespaces": tenant.Status.TenantNamespaces})
+		vals.MergeInto(chartutil.Values{"tenant_main_namespace": coretools.TenantMainNamespace(tenant.Name)})
+	}
 
 	ca.Spec.Chart.Values = apps.ConfigValues(vals)
 
@@ -535,7 +580,7 @@ func newBaseChartAssignment(app *apps.App, rollout *apps.AppRollout, comp *apps.
 			setAnnotation(&ca.ObjectMeta, k, v)
 		}
 	}
-	ca.Spec.NamespaceName = appNamespaceName(rollout.Name)
+	ca.Spec.NamespaceName = appNamespaceName(rollout.Namespace, rollout.Name)
 
 	if comp.Name != "" {
 		ca.Spec.Chart = apps.AssignedChart{
@@ -571,15 +616,18 @@ func matchingRobots(robots []registry.Robot, sel *apps.RobotSelector) ([]registr
 	return res, nil
 }
 
-func appNamespaceName(rollout string) string {
-	return fmt.Sprintf("app-%s", rollout)
+func appNamespaceName(namespace, rollout string) string {
+	if namespace == core.NamespaceDefault {
+		return fmt.Sprintf("app-%s", rollout)
+	}
+	return fmt.Sprintf("%s-app-%s", namespace, rollout)
 }
 
 type componentType string
 
 const (
 	compTypeRobot componentType = "robot"
-	compTypeCloud               = "cloud"
+	compTypeCloud componentType = "cloud"
 )
 
 func chartAssignmentName(rollout string, typ componentType, robot string) string {

@@ -1,0 +1,22 @@
+apiVersion: storage.k8s.io/v1
+kind: StorageClass
+metadata:
+  name: ssd
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+allowVolumeExpansion: true
+{{ if eq .Values.deploy_environment "GCP" }}
+provisioner: pd.csi.storage.gke.io
+parameters:
+  type: pd-ssd
+{{ else if eq .Values.deploy_environment "Azure" }}
+provisioner: kubernetes.io/azure-disk
+parameters:
+  kind: managed
+  storageaccounttype: StandardSSD_LRS
+{{ else if eq .Values.deploy_environment "AWS" }}
+provisioner: kubernetes.io/aws-ebs
+parameters:
+  type: gp3
+  fsType: ext4
+{{ end }}

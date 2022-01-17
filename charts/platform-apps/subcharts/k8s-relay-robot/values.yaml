@@ -1,0 +1,9 @@
+domain: "...ondemand.com"
+deploy_environment: "choose one of those GCP/Azure/AWS depending on kyma.cluster"
+registry: "registry.sap.com/my-project"
+
+images:
+  http_relay_client: "http-relay-client:latest"
+
+robot:
+  name: ""

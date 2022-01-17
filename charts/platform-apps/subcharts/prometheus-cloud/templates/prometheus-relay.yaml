@@ -1,0 +1,154 @@
+# Config according to https://github.com/brancz/kube-rbac-proxy/tree/master/examples/resource-attributes
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: prometheus-relay-server
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: prometheus-relay-server
+  template:
+    metadata:
+      labels:
+        app: prometheus-relay-server
+      annotations:
+        # Checksum that pod restarts on config map changes
+        checksum/config: {{ include (print $.Template.BasePath "/prometheus-relay-config.yaml") . | sha256sum }}
+    spec:
+      serviceAccountName: prometheus-relay
+      containers:
+      - name: server
+        image: "{{ .Values.registry }}/{{ .Values.images.http_relay_server }}"
+        args:
+        - --port=8080
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 15
+        ports:
+        - name: http
+          containerPort: 8080
+      - name: prom-apiserver-proxy
+        image: quay.io/brancz/kube-rbac-proxy:v0.11.0
+        args:
+        - "--insecure-listen-address=0.0.0.0:8090"
+        - "--upstream=http://127.0.0.1:8080/"
+        - "--config-file=/etc/kube-rbac-proxy/config-file.yaml"
+        - "--logtostderr=true"
+        - "--v=4"
+        ports:
+        - containerPort: 8090
+          name: http
+        volumeMounts:
+        - name: config
+          mountPath: /etc/kube-rbac-proxy
+        securityContext:
+          allowPrivilegeEscalation: false
+      securityContext:
+        runAsUser: 65532
+        runAsGroup: 65532
+      volumes:
+      - name: config
+        configMap:
+          name: prom-apiserver-proxy
+---
+# Create permissions for a virtual subresource of the robot CRD to be validated by kube-rbac-proxy
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cloud-robotics:relay-prometheus
+rules:
+- apiGroups:
+  - registry.cloudrobotics.com
+  resources:
+  - robots/relay-prometheus
+  verbs:
+  - get
+  - create
+  - update
+  - patch
+  - delete
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: cloud-robotics:relay-prometheus:robot-service
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: cloud-robotics:relay-prometheus
+subjects:
+- kind: ServiceAccount
+  name: robot-service
+{{ if eq .Values.tenant_main_namespace "default" }}
+  namespace: robot-config
+{{ else }}
+  namespace: {{ .Values.tenant_main_namespace }}-robot-config
+{{ end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-relay-server
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    # This is used by the ServiceMonitor.
+    app: prometheus-relay-server
+spec:
+  ports:
+  - port: 80
+    targetPort: 8090
+    protocol: TCP
+    name: http
+    appProtocol: http
+  - port: 8080
+    protocol: TCP
+    name: metrics
+    appProtocol: http
+  selector:
+    app: prometheus-relay-server
+  type: ClusterIP
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: prometheus-relay
+imagePullSecrets:
+- name: cloud-robotics-images
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: prom-apiserver-proxy:{{ .Values.tenant }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: rbac-apiserver-proxy
+subjects:
+- kind: ServiceAccount
+  name: prometheus-relay
+  namespace: {{ .Release.Namespace }}
+---
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-relay-server
+  labels:
+    app.kubernetes.io/name: {{ .Chart.Name }}
+    prometheus: {{ .Values.tenant }}-kube-prometheus
+spec:
+  endpoints:
+  - port: metrics
+    scheme: https
+    tlsConfig:
+      caFile: /etc/istio-certs/root-cert.pem
+      certFile: /etc/istio-certs/cert-chain.pem
+      insecureSkipVerify: true
+      keyFile: /etc/istio-certs/key.pem
+  selector:
+    matchLabels:
+      app: prometheus-relay-server

@@ -1,0 +1,10 @@
+apiVersion: apps.cloudrobotics.com/v1alpha1
+kind: App
+metadata:
+  name: k8s-relay-dev
+spec:
+  components:
+    cloud:
+      inline: {{ b64enc (.Files.Get "subcharts-packaged/k8s-relay-cloud-0.1.0.tgz") }}
+    robot: 
+      inline: {{ b64enc (.Files.Get "subcharts-packaged/k8s-relay-robot-0.1.0.tgz") }}

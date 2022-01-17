@@ -20,10 +20,10 @@ import (
 	"context"
 	time "time"
 
-	appsv1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	internalinterfaces "github.com/googlecloudrobotics/core/src/go/pkg/client/informers/internalinterfaces"
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/client/listers/apps/v1alpha1"
-	versioned "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned"
+	appsv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	internalinterfaces "github.com/SAP/cloud-robotics/src/go/pkg/client/informers/internalinterfaces"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/listers/apps/v1alpha1"
+	versioned "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	watch "k8s.io/apimachinery/pkg/watch"
@@ -40,32 +40,33 @@ type AppRolloutInformer interface {
 type appRolloutInformer struct {
 	factory          internalinterfaces.SharedInformerFactory
 	tweakListOptions internalinterfaces.TweakListOptionsFunc
+	namespace        string
 }
 
 // NewAppRolloutInformer constructs a new informer for AppRollout type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewAppRolloutInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
-	return NewFilteredAppRolloutInformer(client, resyncPeriod, indexers, nil)
+func NewAppRolloutInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers) cache.SharedIndexInformer {
+	return NewFilteredAppRolloutInformer(client, namespace, resyncPeriod, indexers, nil)
 }
 
 // NewFilteredAppRolloutInformer constructs a new informer for AppRollout type.
 // Always prefer using an informer factory to get a shared informer instead of getting an independent
 // one. This reduces memory footprint and number of connections to the server.
-func NewFilteredAppRolloutInformer(client versioned.Interface, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
+func NewFilteredAppRolloutInformer(client versioned.Interface, namespace string, resyncPeriod time.Duration, indexers cache.Indexers, tweakListOptions internalinterfaces.TweakListOptionsFunc) cache.SharedIndexInformer {
 	return cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (runtime.Object, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AppsV1alpha1().AppRollouts().List(context.TODO(), options)
+				return client.AppsV1alpha1().AppRollouts(namespace).List(context.TODO(), options)
 			},
 			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
 				if tweakListOptions != nil {
 					tweakListOptions(&options)
 				}
-				return client.AppsV1alpha1().AppRollouts().Watch(context.TODO(), options)
+				return client.AppsV1alpha1().AppRollouts(namespace).Watch(context.TODO(), options)
 			},
 		},
 		&appsv1alpha1.AppRollout{},
@@ -75,7 +76,7 @@ func NewFilteredAppRolloutInformer(client versioned.Interface, resyncPeriod time
 }
 
 func (f *appRolloutInformer) defaultInformer(client versioned.Interface, resyncPeriod time.Duration) cache.SharedIndexInformer {
-	return NewFilteredAppRolloutInformer(client, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
+	return NewFilteredAppRolloutInformer(client, f.namespace, resyncPeriod, cache.Indexers{cache.NamespaceIndex: cache.MetaNamespaceIndexFunc}, f.tweakListOptions)
 }
 
 func (f *appRolloutInformer) Informer() cache.SharedIndexInformer {

@@ -1,0 +1,61 @@
+apiVersion: networking.istio.io/v1beta1
+kind: DestinationRule
+metadata:
+  name: api-server-tls
+spec:
+  host: kubernetes.default.svc.cluster.local
+  trafficPolicy:
+    tls:
+      mode: SIMPLE
+      caCertificates: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+    connectionPool:
+      http:
+        # Always upgrade to HTTP/2 to make Gateway on TCP protocol work
+        h2UpgradePolicy: UPGRADE
+  exportTo:
+    - istio-system
+---
+# TCP gateway for Kubernetes API server that HTTP/2 pings reach Kubernetes API server
+apiVersion: networking.istio.io/v1beta1
+kind: Gateway
+metadata:
+  name: k8s-api-gateway
+spec:
+  selector:
+    istio: ingressgateway
+  servers:
+  - hosts:
+    - k8s.{{ .Values.domain }}
+    port:
+      name: tls
+      number: 443
+      protocol: TLS
+    tls:
+      cipherSuites:
+      - ECDHE-RSA-CHACHA20-POLY1305
+      - ECDHE-RSA-AES256-GCM-SHA384
+      - ECDHE-RSA-AES256-SHA
+      - ECDHE-RSA-AES128-GCM-SHA256
+      - ECDHE-RSA-AES128-SHA
+      credentialName: {{ .Values.k8s_gateway_tls }}
+      minProtocolVersion: TLSV1_2
+      mode: SIMPLE
+---
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: kubernetes-api-tcp
+spec:
+  hosts:
+  - k8s.{{ .Values.domain }}
+  gateways:
+  - {{ .Release.Namespace }}/k8s-api-gateway
+  tcp:
+  - name: kubernetes-api
+    match:
+    - port: 443
+    route:
+    - destination:
+        port:
+          number: 443
+        host: kubernetes.default.svc.cluster.local

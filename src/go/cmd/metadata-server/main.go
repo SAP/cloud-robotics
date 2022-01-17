@@ -39,11 +39,9 @@ import (
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 
-	"github.com/cenkalti/backoff"
+	"github.com/SAP/cloud-robotics/src/go/pkg/robotauth"
 	"github.com/fsnotify/fsnotify"
-	"github.com/googlecloudrobotics/core/src/go/pkg/robotauth"
 	"golang.org/x/oauth2"
-	cloudresourcemanager "google.golang.org/api/cloudresourcemanager/v1"
 )
 
 var (
@@ -153,9 +151,12 @@ func (sh ServiceAccountHandler) ServeHTTP(w http.ResponseWriter, r *http.Request
 	log.Printf("Responded to service-account request from %s for %s", r.RemoteAddr, r.URL.Path)
 }
 
+// TODO Check if we could remove some metadata
 type MetadataHandler struct {
-	ClusterName   string
-	ProjectId     string
+	ClusterName string
+	// Seems to be queried when cr-syncer gets token from metadata-server
+	ProjectId string
+	// Not set
 	ProjectNumber int64
 	RobotName     string
 	InstanceId    uint64
@@ -189,18 +190,6 @@ func (mh MetadataHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte(value))
 	log.Printf("Responded to metadata request for %s: %s", r.URL.Path, value)
-}
-
-func getProjectNumber(client *http.Client, projectId string) (int64, error) {
-	crm, err := cloudresourcemanager.New(client)
-	if err != nil {
-		return 0, err
-	}
-	project, err := crm.Projects.Get(projectId).Do()
-	if err != nil {
-		return 0, err
-	}
-	return project.ProjectNumber, nil
 }
 
 func detectChangesToFile(filename string) <-chan struct{} {
@@ -324,17 +313,6 @@ func main() {
 
 	ctx := context.Background()
 	tokenSource := robotAuth.CreateRobotTokenSource(ctx)
-	var projectNumber int64
-	backoff.Retry(
-		func() error {
-			projectNumber, err = getProjectNumber(oauth2.NewClient(ctx, tokenSource), robotAuth.ProjectId)
-			if err != nil {
-				log.Printf("will retry to obtain project number for %s: %v", robotAuth.ProjectId, err)
-			}
-			return err
-		},
-		backoff.NewConstantBackOff(5*time.Second),
-	)
 
 	tokenHandler := TokenHandler{
 		AllowedSources: allowedSources,
@@ -346,11 +324,10 @@ func main() {
 	http.Handle("/computeMetadata/v1/instance/service-accounts/default/", serviceAccountHandler)
 	http.Handle("/computeMetadata/v1/instance/service-accounts/", ConstHandler{[]byte("default/\n")})
 	metadataHandler := MetadataHandler{
-		ClusterName:   robotAuth.RobotName,
-		ProjectId:     robotAuth.ProjectId,
-		ProjectNumber: projectNumber,
-		RobotName:     robotAuth.RobotName,
-		InstanceId:    idHash.Sum64(),
+		ClusterName: robotAuth.RobotName,
+		ProjectId:   "cloud-robotics",
+		RobotName:   robotAuth.RobotName,
+		InstanceId:  idHash.Sum64(),
 		// This needs to be an actual Cloud zone so that it can be mapped
 		// to a Monarch/Stackdriver region. TODO(swolter): We should make
 		// this zone configurable to avoid confusing users.
@@ -420,7 +397,7 @@ func main() {
 		log.Fatalf("%s changed but reloading is not implemented. Crashing...", *robotIdFile)
 	}()
 
-	stop := make(chan os.Signal)
+	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, syscall.SIGTERM)
 
 	<-stop

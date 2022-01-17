@@ -1,0 +1,120 @@
+domain: "...ondemand.com"
+deploy_environment: "choose one of those GCP/Azure/AWS depending on kyma.cluster"
+registry: "registry.sap.com/my-project"
+
+tenant_main_namespace: default
+
+# docker_data_root should match "data-root" in /etc/docker/daemon.json.
+docker_data_root: "/var/lib/docker"
+
+pod_cidr: "192.168.9.0/24"
+
+robot:
+  name: ""
+
+webhook:
+  enabled: "true"
+  tls:
+    key: ""
+    crt: ""
+
+images:
+  chart_assignment_controller: "chart-assignment-controller:latest"
+  cr_syncer: "cr_syncer:latest"
+  metadata_server: "metadata_server:latest"
+
+# Values for fluent-bit subchart
+fluent-bit:
+  fullnameOverride: fluent-bit
+  nameOverride: fluent-bit
+
+  imagePullSecrets:
+    - name: cloud-robotics-images
+
+  extraContainers:
+    # Always keep "logging-proxy" entry as first entry of extraContainers, because envs are overwritten in setup-robot program
+    - name: logging-proxy
+      image: "registry.sap.com/my-project/logging-proxy:latest"
+      env:
+        - name: FLUENTD_HOST
+          value: "127.0.0.1"
+        - name: LISTENING_ADDR
+          value: "127.0.0.1:8080"
+        - name: ENABLE_DEBUG
+          value: "false"
+        - name: TENANT_NAMESPACE
+          value: "default"
+
+  existingConfigMap: fluent-bit-config
+  
+  image:
+    repository: eu.gcr.io/kyma-project/tpi/fluent-bit
+    tag: 1.8.9-aef5095d
+    pullPolicy: IfNotPresent
+
+  luaScripts:
+      filter-script.lua: |
+          function kubernetes_map_keys(tag, timestamp, record)
+              if record.kubernetes == nil then
+                  return 0
+              end
+              map_keys(record.kubernetes.annotations)
+              map_keys(record.kubernetes.labels)
+              return 1, timestamp, record
+          end
+          function map_keys(table)
+              if table == nil then
+                  return
+              end
+              local new_table = {}
+              local changed_keys = {}
+              for key, val in pairs(table) do
+                  local mapped_key = string.gsub(key, "[%/%.]", "_")
+                  if mapped_key ~= key then
+                      new_table[mapped_key] = val
+                      changed_keys[key] = true
+                  end
+              end
+              for key in pairs(changed_keys) do
+                  table[key] = nil
+              end
+              for key, val in pairs(new_table) do
+                  table[key] = val
+              end
+          end
+          function add_source_type(tag, timestamp, record)
+              if record.kubernetes ~= nil then
+                  local namespace = record.kubernetes.namespace_name
+                  if record.kubernetes.container_name == "istio-proxy" and
+                          record.protocol ~= nil then
+                      record.source_type = "istio-envoy-proxy-access-log"
+                  elseif string.find(namespace, "compass%-system") or
+                      string.find(namespace, "kube%-node%-lease") or
+                      string.find(namespace, "kube%-public") or
+                      string.find(namespace, "kube%-system") or
+                      string.find(namespace, "kyma%-installer") or
+                      string.find(namespace, "kyma%-integration") or
+                      string.find(namespace, "kyma%-system") or
+                      string.find(namespace, "istio%-system") then
+                      record.source_type = "kyma-system"
+                  else
+                      record.source_type = "application"
+                  end
+              end
+              return 1, timestamp, record
+          end
+          function add_aligned_sent_received(tag, timestamp, record)
+              if record.source_type ~= "istio-envoy-proxy-access-log" then
+                  return 0
+              end
+              if record.upstream_cluster:find("outbound|", 1) == 1 then
+                  record.bytes_sent_aligned = record.bytes_received
+                  record.bytes_received_aligned = record.bytes_sent
+              else
+                  record.bytes_sent_aligned = record.bytes_sent
+                  record.bytes_received_aligned = record.bytes_received
+              end
+              return 1, timestamp, record
+          end 
+
+  logLevel: warn

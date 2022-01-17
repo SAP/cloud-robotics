@@ -1,11 +1,25 @@
+// Copyright 2021 The Cloud Robotics Authors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//      http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 package chartassignment
 
 import (
 	"testing"
 
+	apps "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	"github.com/SAP/cloud-robotics/src/go/pkg/kubetest"
 	"github.com/golang/mock/gomock"
-	apps "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	"github.com/googlecloudrobotics/core/src/go/pkg/kubetest"
 	"k8s.io/client-go/tools/record"
 	"k8s.io/helm/pkg/chartutil"
 )
@@ -27,6 +41,7 @@ func Test_loadChart_mergesValues(t *testing.T) {
 	unmarshalYAML(t, &as, `
 metadata:
   name: test-assignment-1
+  namespace: default
 spec:
   chart:
     values:
@@ -56,6 +71,7 @@ func Test_loadChartWithoutTemplates_returnsZeroManifests(t *testing.T) {
 	unmarshalYAML(t, &as, `
 metadata:
   name: test-assignment-1
+  namespace: default
 spec:
   chart:
     values:
@@ -79,6 +95,7 @@ func Test_updateSynk_callsApply(t *testing.T) {
 	unmarshalYAML(t, &as, `
 metadata:
   name: test-assignment-1
+  namespace: default
 spec:
   chart:
     values:
@@ -92,7 +109,7 @@ spec:
 	}
 
 	rs := &apps.ResourceSet{}
-	mockSynk.EXPECT().Apply(gomock.Any(), "test-assignment-1", gomock.Any(), gomock.Any()).Return(rs, nil).Times(1)
+	mockSynk.EXPECT().Apply(gomock.Any(), "default.test-assignment-1", gomock.Any(), gomock.Any()).Return(rs, nil).Times(1)
 
 	// First apply, the chart should be installed.
 	r.update(&as)
@@ -106,6 +123,7 @@ func Test_deleteSynk_callsDelete(t *testing.T) {
 	unmarshalYAML(t, &as, `
 metadata:
   name: test-assignment-1
+  namespace: default
 spec:
   chart:
     values:
@@ -118,7 +136,7 @@ spec:
 		recorder: &record.FakeRecorder{},
 	}
 
-	mockSynk.EXPECT().Delete(gomock.Any(), "test-assignment-1").Return(nil).Times(1)
+	mockSynk.EXPECT().Delete(gomock.Any(), "default.test-assignment-1").Return(nil).Times(1)
 
 	// First apply, the chart should be installed.
 	r.delete(&as)

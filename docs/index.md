@@ -1,17 +1,25 @@
-Google's Cloud Robotics Core is an open source platform that provides
+# 🤖  Cloud Robotics 🤖 
+
+This Cloud Robotics version is our adaption of the open source
+[Google Cloud Robotics](https://github.com/googlecloudrobotics/core) platform that provides
 infrastructure essential to building and running robotics solutions for business
 automation. Cloud Robotics Core makes managing robot fleets easy for developers,
 integrators, and operators. It enables:
 
 * packaging and distribution of applications
 * secure, bidirectional robot-cloud communication
-* easy access to Google Cloud services such as ML, logging, and monitoring.
+* easy integration into SAP BTP Kyma infrastructure.
 
-![Cloud Robotics Core overview](cloud-robotics-core-overview.png)
+We consider it as a friendly fork of Google Cloud Robotics and try to keep it as close as possible to it. However there are some differences:
+- This version does not Google Cloud Platform services
+- We introduced multi-tenancy features
+- Some components we did not use have been removed
+- There are docker builds instead of bazel
+- Cluster provisiong is separated from deployment of Cloud Robotics. In fact there is no automated cluster provisioning at the moment.
 
 ### Documentation
 
-* [Quickstart](quickstart.md): Set up Cloud Robotics from binaries.
+* [Quickstart](): Set up Cloud Robotics from binaries (following soon)
 * [Overview](overview.md): Develop a deeper understanding of Cloud Robotics.
 * Concepts
     * Common: [Project configuration](concepts/config.md)
@@ -19,23 +27,10 @@ integrators, and operators. It enables:
       [Device Identity](concepts/device_identity.md)
     * Layer 2: [Application Management](concepts/app-management.md)
 * How-to guides
-    * [Deploying Cloud Robotics from sources](how-to/deploy-from-sources)<br/>
-      Build and deploy Cloud Robotics from the sources hosted on Github using
-      Bazel.
-    * [Running a ROS node as a Kubernetes deployment](how-to/running-ros-node.md)<br/>
-      Use Kubernetes to administer containerized workloads on a robot.
-    * [Setting up OAuth for web UIs](how-to/setting-up-oauth.md)<br/>
-      Use services like Grafana with a web browser.
+    * [Deploying Cloud Robotics from sources](how-to/deploy-from-sources.md)<br/>
+      Build and deploy Cloud Robotics from the sources hosted on Github.
     * [Connecting a robot to the cloud](how-to/connecting-robot.md)<br/>
-      Enable secure communication between a robot and the Google Cloud Platform.
-    * [Using Cloud Storage from a robot](how-to/using-cloud-storage.md)<br/>
-      Programmatically store data from the robot with Cloud Storage.
-    * [Deploying a service to the cloud](how-to/deploying-service.md)<br/>
-      Run an API service in the cloud cluster and access it from a robot.
-    * [Deploying a gRPC service](how-to/deploying-grpc-service.md)<br/>
-      Run an gRPC service written in C++ in the cloud cluster and access it from a robot.
-    * [Creating a declarative API](how-to/creating-declarative-api.md)<br/>
-      Create a Kubernetes-style declarative API and run it on the cloud or on a robot.
-* Development
-    * [Debugging authentication problems](developers/debug-auth.md)<br/>
-      Useful tips for working with Authentication and Authorization systems.
+      Enable secure communication between a robot and the Cloud Kubernets Cluster.
+
+### Are you looking for a Cloud Robotics use case?
+Try executing SAP EWM warehouse orders on autonmous robots 🤖 with the apps of our [EWM Cloud Robotics repository](https://github.com/SAP/ewm-cloud-robotics/).

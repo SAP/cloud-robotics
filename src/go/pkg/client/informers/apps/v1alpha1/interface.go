@@ -17,7 +17,7 @@
 package v1alpha1
 
 import (
-	internalinterfaces "github.com/googlecloudrobotics/core/src/go/pkg/client/informers/internalinterfaces"
+	internalinterfaces "github.com/SAP/cloud-robotics/src/go/pkg/client/informers/internalinterfaces"
 )
 
 // Interface provides access to all the informers in this group version.
@@ -50,12 +50,12 @@ func (v *version) Apps() AppInformer {
 
 // AppRollouts returns a AppRolloutInformer.
 func (v *version) AppRollouts() AppRolloutInformer {
-	return &appRolloutInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+	return &appRolloutInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ChartAssignments returns a ChartAssignmentInformer.
 func (v *version) ChartAssignments() ChartAssignmentInformer {
-	return &chartAssignmentInformer{factory: v.factory, tweakListOptions: v.tweakListOptions}
+	return &chartAssignmentInformer{factory: v.factory, namespace: v.namespace, tweakListOptions: v.tweakListOptions}
 }
 
 // ResourceSets returns a ResourceSetInformer.

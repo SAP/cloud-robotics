@@ -2,115 +2,92 @@
 
 Estimated time: 30 min
 
-This page describes how to set up a Google Cloud Platform (GCP) project
-containing the Cloud Robotics Core components.
-In particular, this creates a cluster with Google Kubernetes Engine and prepares
-it to accept connections from robots, which enables those robots to securely
-communicate with GCP.
-The commands were tested on machines running Debian (Stretch) or Ubuntu (16.04
-and 18.04) Linux.
+This page describes how to deploy Cloud Robotics Core from sources on your Kyma Cluster.
 
-1. In the GCP Console, go to the [Manage resources][resource-manager] page and
-   select or create a project.
-1. Make sure that [billing][modify-project] is enabled for your project.
-1. [Install the Cloud SDK][cloud-sdk]. When prompted, choose the project that you created above.
-1. After installing the Cloud SDK, install the `kubectl` command-line tool:
-
-    ```shell
-    gcloud components install kubectl
-    ```
-
-    If you're using Debian or Ubuntu, you may need to use `apt install kubectl` instead.
-
-1. [Install the Bazel build system][install-bazel].
-
-1. Install additional build dependencies:
-
-    ```shell
-    sudo apt-get install default-jdk git python-dev unzip xz-utils
-    ```
-
-[resource-manager]: https://console.cloud.google.com/cloud-resource-manager
-[modify-project]: https://cloud.google.com/billing/docs/how-to/modify-project
-[cloud-sdk]: https://cloud.google.com/sdk/docs/
-[install-bazel]: https://github.com/bazelbuild/bazel/blob/4.0.0/site/docs/install-ubuntu.md
+Please use a Linux shell like Ubuntu 20.04 LTS. You will need the following tools on your machine
+- [git](https://git-scm.com/downloads)
+- [docker](https://docs.docker.com/get-docker/)
+- [kubectl](https://kubernetes.io/docs/tasks/tools/)
+- [helm](https://helm.sh/docs/intro/install/)
 
 ## Build and deploy the project
 
-1. Clone the source repo.
+1. Get a Kubernetes cluster with Kyma or Istio
+
+    Examples:
+    - [SAP BTP Kyma](cluster-provisioning/Kyma@BTP.md)
+    - [Kyma @ Gardener](cluster-provisioning/Kyma@Gardener.md)
+    - [Istio @ Gardener](cluster-provisioning/Istio@Gardener.md)
+    - [Istio @ GCP](cluster-provisioning/Kyma@GCP.md)
+
+2. Clone the source repo.
 
     ```shell
-    git clone https://github.com/googlecloudrobotics/core
-    cd core
+    git clone https://github.com/SAP/cloud-robotics
+    cd cloud-robotics
     ```
 
-1. Create application default credentials, which are used to deploy the cloud project and
-   authorize access to the cloud docker registry.
+3. Create a Cloud Robotics config in your Kyma cluster:
+
+   Before you deploy the images in your cluster for the first time you need to configure it using `make kubeconfig=<path of kubeconfig file of your cluster> set-deployment-config`.
+
+   Please answer the configuration questions. Domain and Ingress IP of your cluster should be determined automatically and provided as default values.
+
+   By default the images are pulled and pushed to the docker registry set in `.REGISTRY` file in the root directory of this repository on your computer. This file is not synchronized to github. 
+
+   When you save the configuration and there is no `.REGISTRY` file on your computer, it will be created automatically using the registry you entered in the wizzard.
+
+    Command summary:
 
     ```shell
-    gcloud auth application-default login
-    gcloud auth configure-docker
+    make kubeconfig=<path of kubeconfig file of your cluster> set-deployment-config
     ```
 
-1. Create a Cloud Robotics config in your project:
+4. Build the project. Depending on your computer and internet connection, it may take around 15 minutes.
+
+   Docker containers for core services are built in docker containers.
+
+   If you have set a docker registry where the images are already existing in the previous step, you could skip this step.
+
+   You can start building your docker images using `make docker-images`
+
+   After a successfull build `make docker-push` pushes them to the registry.
+
+   Command summary:
+
+   ```shell
+   make docker-images
+   make docker-push
+   ```
+
+5. Deploy the cloud project.
+
+   In order to deploy the core services use this command `make kubeconfig=<path of kubeconfig file of your cluster> create-deployment`.
+
+   When your docker images are pushed and your cluster is configured correctly this deployment should finish automatically after a while.
+
+   Command summary:
 
     ```shell
-    ./deploy.sh set_config [PROJECT_ID]
+    make kubeconfig=<path of kubeconfig file of your cluster> create-deployment
     ```
 
-    You can keep the defaults for the other settings by hitting `ENTER`.
+After completing the deployment, you can list these components from the console on your workstation:
 
-    This command creates a file `config.sh` containing your choices and stores
-    in into a cloud-storage bucket named `[PROJECT_ID]-cloud-robotics-config`.
-    You can verify the settings using:
-
-    ```shell
-    gsutil cat gs://[PROJECT_ID]-cloud-robotics-config/config.sh
-    ```
-
-
-1. Build the project. Depending on your computer and internet connection, it may take around 15 minutes.
-
-    ```shell
-    bazel build //...
-    ```
-
-1. Deploy the cloud project.
-
-    ```shell
-    ./deploy.sh create [PROJECT_ID]
-    ```
-
-> **Known issue:**
-> Sometimes, this command fails with an error message like
-> `Error 403: The caller does not have permission`,
-> `Error 403: Service ... not found or permission denied',
-> `Bad status during token exchange: 503`, or
-> `Error enabling service`.
-> In these cases, wait for a minute and try again.
-
-`deploy.sh` created a Kubernetes cluster using Google Kubernetes Engine and used Helm to install the Cloud Robotics Core components.
-You can browse these components on the [Workloads dashboard](https://console.cloud.google.com/kubernetes/workload).
-Alternatively, you can list them from the console on your workstation:
-
-```console
+```shell
 $ kubectl get pods
-
-NAME                READY   STATUS             RESTARTS   AGE
-cert-manager-xxx    1/1     Running            0          1m
-nginx-ingress-xxx   1/1     Running            0          1m
-oauth2-proxy-xxx    0/1     CrashLoopBackOff   4          1m
-token-vendor-xxx    1/1     Running            0          1m
 ```
 
-> **Note** Unless you already set up OAuth, the `oauth2-proxy` will show an error which we will ignore for now.
+```shell
+NAME                                          READY   STATUS    RESTARTS   AGE
+cert-manager-57db9b7d88-gm6qv                 1/1     Running   0          64m
+cert-manager-cainjector-55d7f64568-hctf2      1/1     Running   0          64m
+cert-manager-webhook-7766b75f65-gj2w7         1/1     Running   0          64m
+app-rollout-controller-64b7676d6-bdf6f        1/1     Running   0          59s
+chart-assignment-controller-73a7f73d6-acf7e   1/1     Running   0          59s
+```
 
-
-In addition to the cluster, `deploy.sh` also created:
-
-* the [cloud-robotics IoT Core Registry](https://console.cloud.google.com/iot/registries) that will be used to manage the list of authorized robots,
-* the [[PROJECT_ID]-robot Cloud Storage bucket](https://console.cloud.google.com/storage/browser), containing the scripts that connect robots to the cloud, and
-* the [Identity & Access Management policies](https://console.cloud.google.com/iam-admin/iam) that authorize robots and humans to communicate with GCP.
+More services are about to come 😀
 
 With the project deployed, you're ready to [connect a robot to the cloud](connecting-robot.md).
 
@@ -119,26 +96,12 @@ With the project deployed, you're ready to [connect a robot to the cloud](connec
 To apply changes made in the source code, run:
 
 ```shell
-./deploy.sh update [PROJECT_ID]
+make docker-images
+make docker-push
+make kubeconfig=<path of kubeconfig file of your cluster> update-deployment
 ```
-
-## Clean up
-
-The following command will delete:
-
-* the [cloud-robotics Kubernetes cluster](https://console.cloud.google.com/kubernetes/list)
-* the [cloud-robotics IoT Core Registry](https://console.cloud.google.com/iot/registries)
-
-This can be useful if the cluster is in a broken state.
-Be careful with this invocation, since you'll have to redeploy the project and reconnect any robots afterwards.
-
-```shell
-./deploy.sh delete [PROJECT_ID]
-```
-
-If you want to completely shut down the project, see [the Resource Manager documentation](https://cloud.google.com/resource-manager/docs/creating-managing-projects#shutting_down_projects).
 
 ## What's next
 
-* [Connecting a robot to the cloud](how-to/connecting-robot.md).
-* [Setting up OAuth for web UIs](how-to/setting-up-oauth.md).
+* [Connecting a robot to the cloud](connecting-robot.md).
+* [Find out more about Logging](../concepts/logging-doc.md)

@@ -17,11 +17,15 @@
 package fake
 
 import (
-	clientset "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned"
-	appsv1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned/typed/apps/v1alpha1"
-	fakeappsv1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned/typed/apps/v1alpha1/fake"
-	registryv1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned/typed/registry/v1alpha1"
-	fakeregistryv1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned/typed/registry/v1alpha1/fake"
+	clientset "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned"
+	appsv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/apps/v1alpha1"
+	fakeappsv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/apps/v1alpha1/fake"
+	configv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/config/v1alpha1"
+	fakeconfigv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/config/v1alpha1/fake"
+	missionv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/mission/v1alpha1"
+	fakemissionv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/mission/v1alpha1/fake"
+	registryv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/registry/v1alpha1"
+	fakeregistryv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/registry/v1alpha1/fake"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/apimachinery/pkg/watch"
 	"k8s.io/client-go/discovery"
@@ -82,6 +86,16 @@ var (
 // AppsV1alpha1 retrieves the AppsV1alpha1Client
 func (c *Clientset) AppsV1alpha1() appsv1alpha1.AppsV1alpha1Interface {
 	return &fakeappsv1alpha1.FakeAppsV1alpha1{Fake: &c.Fake}
+}
+
+// ConfigV1alpha1 retrieves the ConfigV1alpha1Client
+func (c *Clientset) ConfigV1alpha1() configv1alpha1.ConfigV1alpha1Interface {
+	return &fakeconfigv1alpha1.FakeConfigV1alpha1{Fake: &c.Fake}
+}
+
+// MissionV1alpha1 retrieves the MissionV1alpha1Client
+func (c *Clientset) MissionV1alpha1() missionv1alpha1.MissionV1alpha1Interface {
+	return &fakemissionv1alpha1.FakeMissionV1alpha1{Fake: &c.Fake}
 }
 
 // RegistryV1alpha1 retrieves the RegistryV1alpha1Client

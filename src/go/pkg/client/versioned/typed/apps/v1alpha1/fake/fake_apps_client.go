@@ -17,7 +17,7 @@
 package fake
 
 import (
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned/typed/apps/v1alpha1"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/apps/v1alpha1"
 	rest "k8s.io/client-go/rest"
 	testing "k8s.io/client-go/testing"
 )
@@ -30,12 +30,12 @@ func (c *FakeAppsV1alpha1) Apps() v1alpha1.AppInterface {
 	return &FakeApps{c}
 }
 
-func (c *FakeAppsV1alpha1) AppRollouts() v1alpha1.AppRolloutInterface {
-	return &FakeAppRollouts{c}
+func (c *FakeAppsV1alpha1) AppRollouts(namespace string) v1alpha1.AppRolloutInterface {
+	return &FakeAppRollouts{c, namespace}
 }
 
-func (c *FakeAppsV1alpha1) ChartAssignments() v1alpha1.ChartAssignmentInterface {
-	return &FakeChartAssignments{c}
+func (c *FakeAppsV1alpha1) ChartAssignments(namespace string) v1alpha1.ChartAssignmentInterface {
+	return &FakeChartAssignments{c, namespace}
 }
 
 func (c *FakeAppsV1alpha1) ResourceSets() v1alpha1.ResourceSetInterface {

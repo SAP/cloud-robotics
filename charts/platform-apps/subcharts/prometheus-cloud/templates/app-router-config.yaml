@@ -1,0 +1,48 @@
+{{ if eq .Values.k8s_service_catalog "true" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-auth-proxy
+  labels:
+    app: app-auth-proxy
+data:
+  config.json: |
+    {
+      "routes": [{
+              "path": "/grafana",
+              "priority": 10,
+              "protected": true,
+              "remove_from_path": "/grafana",
+              "target": "http://{{ .Values.tenant }}-grafana",
+              "forward_auth_token": false,
+              "http_method_scopes": [{
+                "http_method": "*",
+                "scope": "$XSAPPNAME.Edit"
+            }]
+          },{
+              "path": "/prometheus",
+              "priority": 10,
+              "protected": true,
+              "remove_from_path": "/prometheus",
+              "target": "http://{{ .Values.tenant }}-kube-prometheus:9090",
+              "forward_auth_token": false,
+              "http_method_scopes": [{
+                "http_method": "*",
+                "scope": "$XSAPPNAME.Edit"
+            }]
+          }],
+      "redirect_uri": "https://{{ template "prometheus-domain" . }}/oauth/callback",
+      "debug": false,
+      "redis_store": {
+        "addr": "",
+        "password": "",
+        "db": 0
+      },
+      "cookie":{
+          "session_name": "prometheus-{{ .Values.tenant }}-session",
+          "max_age_seconds": 900,
+          "key": "{{ .Values.cookie_secret }}",
+          "httponly": true
+      }
+    }
+{{ end }}

@@ -24,11 +24,9 @@ import (
 	"net/http"
 	"os"
 
-	"contrib.go.opencensus.io/exporter/stackdriver"
-	apps "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	"github.com/googlecloudrobotics/core/src/go/pkg/controller/chartassignment"
+	apps "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	"github.com/SAP/cloud-robotics/src/go/pkg/controller/chartassignment"
 	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
 	"k8s.io/client-go/rest"
@@ -52,9 +50,6 @@ var (
 	certDir = flag.String("cert-dir", "",
 		"Directory for TLS certificates")
 
-	stackdriverProjectID = flag.String("trace-stackdriver-project-id", "",
-		"If not empty, traces will be uploaded to this Google Cloud Project. Not relevant for cloud cluster")
-
 	maxQPS = flag.Int("apiserver-max-qps", 50,
 		"Maximum number of calls to the API server per second.")
 )
@@ -62,17 +57,6 @@ var (
 func main() {
 	flag.Parse()
 	ctx := context.Background()
-	if *stackdriverProjectID != "" && *cloudCluster == false {
-		sd, err := stackdriver.NewExporter(stackdriver.Options{
-			ProjectID: *stackdriverProjectID,
-		})
-		if err != nil {
-			log.Fatalf("Failed to create the Stackdriver exporter: %v", err)
-		}
-		trace.RegisterExporter(sd)
-		trace.ApplyConfig(trace.Config{DefaultSampler: trace.AlwaysSample()})
-		defer sd.Flush()
-	}
 
 	var clusterName string
 	if *cloudCluster == true {

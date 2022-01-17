@@ -1,0 +1,47 @@
+{{ range .Values.robots }}
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: prometheus-federation-{{ .name }}
+  labels:
+    prometheus: {{ $.Values.tenant }}-kube-prometheus
+spec:
+  endpoints:
+  - port: http
+    path: /client/{{ .name }}/federate
+    params:
+      'match[]':
+      - '{job=~".+"}'
+    honorLabels: true
+    scheme: https
+    tlsConfig:
+      caFile: /etc/istio-certs/root-cert.pem
+      certFile: /etc/istio-certs/cert-chain.pem
+      insecureSkipVerify: true
+      keyFile: /etc/istio-certs/key.pem
+  targetLabels:
+  - robot
+  selector:
+    matchLabels:
+      app: prometheus-federation
+      robot: "{{ .name }}"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: prometheus-federation-{{ .name }}
+  labels:
+    app: prometheus-federation
+    robot: "{{ .name }}"
+spec:
+  ports:
+  - port: 80
+    targetPort: 8080
+    protocol: TCP
+    name: http
+    appProtocol: http
+  selector:
+    app: prometheus-relay-server
+  type: ClusterIP
+---
+{{ end }}

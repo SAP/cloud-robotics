@@ -17,8 +17,10 @@
 package fake
 
 import (
-	appsv1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	registryv1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/registry/v1alpha1"
+	appsv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	configv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/config/v1alpha1"
+	missionv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/mission/v1alpha1"
+	registryv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/registry/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,6 +33,8 @@ var codecs = serializer.NewCodecFactory(scheme)
 
 var localSchemeBuilder = runtime.SchemeBuilder{
 	appsv1alpha1.AddToScheme,
+	configv1alpha1.AddToScheme,
+	missionv1alpha1.AddToScheme,
 	registryv1alpha1.AddToScheme,
 }
 

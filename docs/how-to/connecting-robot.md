@@ -6,18 +6,18 @@ This page describes how to connect a Kubernetes cluster on a robot running Ubunt
 
 Once you've done this, you can:
 
-* Run a private Docker container from the Google Container Registry
+* Run a private Docker container from a container registry of your choice
 * Securely communicate with cloud services
-* See logs from the robot in the Cloud Console
 
-## Setting up the GCP project
+## Setting up the BTP project
 
-1. If you haven't already, complete the [Setting up the GCP project](../quickstart.md) steps.
+1. If you haven't already, complete the [deploy-from-sources](deploy-from-sources.md) steps.
 
-1. On the computer you used to set up the cloud project, generate an access token, which you'll use to give the robot access to the cloud:
+1. On the computer you used to set up the project, find out the domain name of your Kyma Kubernetes cluster:
 
     ```shell
-    gcloud auth application-default print-access-token
+    export KUBECONFIG=<path-to-kubeconfig-of-kyma-cluster>
+    kubectl get configmaps -n robot-config robot-setup -o=go-template --template='{{index .data "domain"}}'
     ```
 
 ## Installing the cluster on the robot
@@ -28,39 +28,35 @@ The installation script installs and configures:
 
 * Docker
 * A single-node Kubernetes cluster (packages: kubectl, kubeadm, kubelet)
-* Deployments in the local cluster that handle authentication and upload logs to [Stackdriver Logging](https://cloud.google.com/logging/)
 
 <!-- this comment is required to separate the lists -->
 
-1. Download and run [install\_k8s\_on\_robot.sh](https://raw.githubusercontent.com/googlecloudrobotics/core/master/src/bootstrap/robot/install_k8s_on_robot.sh). This script will take a few minutes as it downloads and installs the dependencies of the Kubernetes cluster.
+1. Download and run install\_k8s\_on\_robot.sh. This script will take a few minutes as it downloads and installs the dependencies of the Kubernetes cluster.
 
-    ```console
-    $ curl https://raw.githubusercontent.com/googlecloudrobotics/core/master/src/bootstrap/robot/install_k8s_on_robot.sh | bash
+    ```shell
+    curl https://setup-robot.<your-kyma-cloud-cluster-domain>/install_k8s_on_robot.sh | bash
     [...]
     The local Kubernetes cluster has been installed.
     ```
 
     After the script successfully finishes, the Kubernetes cluster is up and running.
-
+    
     > **Note:**  At the end of the script output, you might notice instructions for creating `~/.kube/config`, deploying a pod network, and joining nodes to the cluster. You can ignore these instructions for now, as the script has already set up a single-node cluster.
 
-1. Set up the robot cluster to connect to the cloud. When running `setup_robot.sh`, you'll need to enter the access token you generated earlier. You may find it easiest if you SSH into the robot from the workstation you used to set up the project.
+    In case you installed docker for the first time on the robot, please log off and on again that the assignment of your user to docker group is loaded.
+
+1. Set up the robot cluster to connect to the cloud. You may find it easiest if you SSH into the robot from the workstation you used to set up the project.
 
     ```shell
-    mkdir -p ~/cloud-robotics-core
-    cd ~/cloud-robotics-core
-    curl https://raw.githubusercontent.com/googlecloudrobotics/core/master/src/bootstrap/robot/setup_robot.sh >setup_robot.sh
-    bash setup_robot.sh my-robot --project ${PROJECT_ID} \
-      --robot-type my-robot-type
+    curl https://setup-robot.<your-kyma-cloud-cluster-domain>/setup_robot.sh > setup_robot.sh
+    bash setup_robot.sh my-robot --tenant default --robot-type my-robot-type --labels "model=my-robot-label"
     ```
-
-    Set `${PROJECT_ID}` to your GCP project ID. When prompted for an access token, provide the authentication token you generated earlier.
 
     > **Note:** `my-robot-type` is a placeholder and you can ignore it for now.
 
 ## What's next
 
-* [Using Cloud Storage from a robot](using-cloud-storage.md).
+* tbd
 
 ## Uninstalling the local cluster
 

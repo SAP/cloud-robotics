@@ -1,2 +1,0 @@
-# When this marker file is present, the deploy.sh script installs the binary instead of building
-# from local sources.

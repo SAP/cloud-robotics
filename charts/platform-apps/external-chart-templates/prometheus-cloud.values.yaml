@@ -1,0 +1,162 @@
+# Configuration for the prometheus-operator chart.
+# Reference: https://github.com/helm/charts/blob/master/stable/prometheus-operator/values.yaml
+#
+# WARNING: the prometheus-operator chart is complicated and error-prone. If you
+# edit this file, run the following command to generate the output with `helm
+# template`, and verify that your changes have the expected effect.
+#
+#   bazel build src/app_charts/prometheus/prometheus-operator-chart.cloud.yaml
+
+nameOverride: ${TENANT}-kube
+fullnameOverride: ${TENANT}-kube
+
+# Alertmanagers have to be deployed individually by users.
+alertmanager:
+  enabled: false
+
+prometheus:
+  serviceMonitor:
+    selfMonitor: false
+    scheme: https
+    tlsConfig:
+      caFile: /etc/istio-certs/root-cert.pem
+      certFile: /etc/istio-certs/cert-chain.pem
+      insecureSkipVerify: true
+      keyFile: /etc/istio-certs/key.pem    
+  prometheusSpec:
+    # Pick up all service monitors across tenant namespaces
+    serviceMonitorNamespaceSelector:
+      matchLabels:
+        cloud-robotics-tenant: ${TENANT}
+    serviceMonitorSelector:
+      any: true
+    # Pick up all pod monitors across all namespaces.
+    podMonitorNamespaceSelector:
+      matchLabels:
+        cloud-robotics-tenant: ${TENANT}
+    podMonitorSelector:
+      any: true
+    ruleNamespaceSelector:
+      matchLabels:
+        cloud-robotics-tenant: ${TENANT}
+    probeNamespaceSelector:
+      matchLabels:
+        cloud-robotics-tenant: ${TENANT}
+    externalUrl: "https://${PROMETHEUS_DOMAIN}/prometheus/"
+    retention: "${RETENTION_TIME}"
+    retentionSize: "${RETENTION_SIZE}"
+    walCompression: true
+    resources:
+      requests:
+        cpu: "${LIMITS_CPU}"
+        memory: "${LIMITS_MEMORY}"
+      limits:
+        cpu: "${LIMITS_CPU}"
+        memory: "${LIMITS_MEMORY}"
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          storageClassName: ssd
+          accessModes: ["ReadWriteOnce"]
+          resources:
+            requests:
+              storage: "${REQUESTS_STORAGE}"
+    volumeMounts:
+    - name: istio-certs
+      mountPath: /etc/istio-certs/
+      readOnly: true
+    podMetadata:
+      annotations:
+        sidecar.istio.io/rewriteAppHTTPProbers: "true"
+        sidecar.istio.io/userVolume: '[{"name": "istio-certs", "emptyDir": {"medium": "Memory"}}]'
+        sidecar.istio.io/userVolumeMount: '[{"name": "istio-certs", "mountPath": "/etc/istio-certs/"}]'
+        proxy.istio.io/config: |-
+          proxyMetadata:
+            OUTPUT_CERTS: /etc/istio-certs/
+    # Pick up user-created Alertmanager pods with app=alertmanager and a non-empty port.
+    additionalAlertManagerConfigs:
+    - kubernetes_sd_configs:
+        - role: service
+      tls_config:
+        ca_file: /var/run/secrets/kubernetes.io/serviceaccount/ca.crt
+      bearer_token_file: /var/run/secrets/kubernetes.io/serviceaccount/token
+      relabel_configs:
+      - source_labels: [__meta_kubernetes_service_label_app]
+        regex: kube-alertmanager
+        action: keep
+    # No need for high liveness probe limits. It is tempoary removed from prometheus operator https://github.com/prometheus-operator/prometheus-operator/issues/3391
+
+# etcd, scheduler, and controller-manager are managed by GKE and hidden.
+kubeEtcd:
+  enabled: false
+kubeControllerManager:
+  enabled: false
+kubeScheduler:
+  enabled: false
+coreDns:
+  enabled: false
+
+# Throws an invalid namespace "kube-system" error during deployment, as this is
+# trying to install resources into the kube-system namespace, which synk does
+# not support.
+kubeProxy:
+  enabled: false
+
+# Disable kubeApiServer because it is already scraped by Kyma default prometheus instance
+kubeApiServer:
+  enabled: false
+
+nodeExporter:
+  enabled: false
+
+prometheusOperator:
+  serviceMonitor:
+    selfMonitor: false
+  podAnnotations:
+    sidecar.istio.io/rewriteAppHTTPProbers: "true"
+  tls:
+    enabled: false
+  admissionWebhooks:
+    enabled: false
+  namespaces:
+    additional:
+    - ${TENANT_NAMESPACES}
+  createCustomResource: false
+  kubeletService:
+    enabled: false
+  alertmanagerInstanceNamespaces:
+    - ${TENANT_NAMESPACES}
+  prometheusInstanceNamespaces:
+    - ${TENANT_NAMESPACES}
+
+defaultRules:
+  appNamespacesTarget: "${TENANT_MAIN_NS}.*"
+
+# Deactivate other non tenant relevant monitorings
+kubelet:
+  enabled: false
+kubeStateMetrics:
+  enabled: false
+
+# Subcharts
+
+grafana:
+  nameOverride: zzzgggzzzggg-grafana
+  fullnameOverride: zzzgggzzzggg-grafana
+  serviceMonitor:
+    selfMonitor: false
+  podAnnotations:
+    sidecar.istio.io/rewriteAppHTTPProbers: "true"
+  env:
+    GF_SERVER_DOMAIN: "${PROMETHEUS_DOMAIN}"
+    GF_SERVER_ROOT_URL: "https://${PROMETHEUS_DOMAIN}/grafana"
+    GF_AUTH_ANONYMOUS_ENABLED: "true"
+  # Load dashboards from configmaps with a given label across all namespaces.
+  sidecar:
+    dashboards:
+      enabled: true
+      label: grafana # Label our own legacy grafana-operator uses.
+      searchNamespace: ALL
+  grafana.ini:
+    analytics:
+      check_for_updates: false

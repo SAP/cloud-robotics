@@ -1,0 +1,11 @@
+domain: "...ondemand.com"
+registry: "registry.sap.com/my-project"
+robot:
+  name: ""
+
+tenant: "default"
+tenant_domain: "tenant.local"
+tenant_main_namespace: "t-tenant"
+
+images:
+  http_relay_client: "http-relay-client:latest"

@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: robot-setup
+data:
+  registry: "{{ .Values.registry }}"
+  domain: "{{ .Values.domain }}"
+  setup_robot_crc: "{{ .Values.setup_robot_crc }}"
+  setup_robot_image: "{{ .Values.images.setup_robot_image }}"
+  chart_assignment_controller_image: "{{ .Values.images.chart_assignment_controller }}"
+  cr_syncer_image: "{{ .Values.images.cr_syncer }}"
+  metadata_server_image: "{{ .Values.images.metadata_server }}"
+  logging_proxy_image: "{{ .Values.images.logging_proxy }}"

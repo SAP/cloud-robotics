@@ -1,0 +1,443 @@
+domain: "...ondemand.com"
+ingress_ip: ""
+deploy_environment: "choose one of those GCP/Azure/AWS depending on kyma.cluster"
+registry: "registry.sap.com/my-project"
+
+k8s_service_catalog: "false"
+
+default_gateway: kyma-system/kyma-gateway
+tenant_specific_gateways: "false"
+
+k8s_gateway_tls: kyma-gateway-certs
+
+images:
+  app_rollout_controller: "app-rollout-controller:latest"
+  chart_assignment_controller: "chart-assignment-controller:latest"
+  http_relay_client: "http-relay-client:latest"
+  http_relay_server: "http-relay-server:latest"
+  app_auth_proxy: "app-auth-proxy:latest"
+  tenant_controller: "tenant-controller:latest"
+
+# Certificate authority used to sign in-cluster certificates.
+certificate_authority:
+  crt: ""
+
+# Values for cert-manager subchart
+cert-manager:
+  installCRDs: true
+  fullnameOverride: cert-manager
+  podAnnotations:
+    sidecar.istio.io/inject: "false"
+  webhook:
+    podAnnotations:
+      sidecar.istio.io/inject: "false"
+  cainjector:
+    podAnnotations:
+      sidecar.istio.io/inject: "false"
+  startupapicheck:
+    podAnnotations:
+      sidecar.istio.io/inject: "false"
+
+cloud_logging: "false"
+cloudLoggingFluentdEndpoint: ""
+cloudLoggingFluentdUser: ""
+cloudLoggingFluentdPassword: ""
+
+stackdriver_logging: "false"
+
+# Values for fluentd subchart
+fluentd:
+  # DaemonSet or Deployment
+  kind: "Deployment"
+
+  # # Only applicable for Deployment
+  replicaCount: 1
+
+  fullnameOverride: fluentd
+  nameOverride: fluentd
+
+  ## Fluentd service
+  ##
+  service:
+    type: "ClusterIP"
+    annotations: { }
+    ports:
+      - name: "forwarder"
+        protocol: TCP
+        containerPort: 24224
+
+  ## Fluentd configurations:
+  ##
+  fileConfigs:
+    00.conf: "# Look in confimap fluentd-basic-conf"
+    01_sources.conf: ""
+    02_filters.conf: ""
+    03_dispatch.conf: ""
+    04_outputs.conf: ""
+
+  configMapConfigs:
+    - fluentd-basic-conf
+    - fluentd-prometheus-conf
+
+# Kyma fluent-bit subchart
+# According to https://pages.github.tools.sap/perfx/cloud-logging-service/consumption/from-sap-cp-kyma/#btp-kyma-runtime-managed
+fluent-bit:
+  fullnameOverride: fluent-bit
+  nameOverride: fluent-bit
+
+  kind: DaemonSet
+
+  image:
+    repository: eu.gcr.io/kyma-project/tpi/fluent-bit
+    tag: 1.8.9-aef5095d
+    pullPolicy: IfNotPresent
+
+  # envFrom: 
+  #   - secretRef:
+  #       name: cls-fluent-bit-secret
+
+  luaScripts:
+      filter-script.lua: |
+          function kubernetes_map_keys(tag, timestamp, record)
+              if record.kubernetes == nil then
+                  return 0
+              end
+              map_keys(record.kubernetes.annotations)
+              map_keys(record.kubernetes.labels)
+              return 1, timestamp, record
+          end
+          function map_keys(table)
+              if table == nil then
+                  return
+              end
+              local new_table = {}
+              local changed_keys = {}
+              for key, val in pairs(table) do
+                  local mapped_key = string.gsub(key, "[%/%.]", "_")
+                  if mapped_key ~= key then
+                      new_table[mapped_key] = val
+                      changed_keys[key] = true
+                  end
+              end
+              for key in pairs(changed_keys) do
+                  table[key] = nil
+              end
+              for key, val in pairs(new_table) do
+                  table[key] = val
+              end
+          end
+          function add_source_type(tag, timestamp, record)
+              if record.kubernetes ~= nil then
+                  local namespace = record.kubernetes.namespace_name
+                  if record.kubernetes.container_name == "istio-proxy" and
+                          record.protocol ~= nil then
+                      record.source_type = "istio-envoy-proxy-access-log"
+                  elseif string.find(namespace, "compass%-system") or
+                      string.find(namespace, "kube%-node%-lease") or
+                      string.find(namespace, "kube%-public") or
+                      string.find(namespace, "kube%-system") or
+                      string.find(namespace, "kyma%-installer") or
+                      string.find(namespace, "kyma%-integration") or
+                      string.find(namespace, "kyma%-system") or
+                      string.find(namespace, "istio%-system") then
+                      record.source_type = "kyma-system"
+                  else
+                      record.source_type = "application"
+                  end
+              end
+              return 1, timestamp, record
+          end
+          function add_aligned_sent_received(tag, timestamp, record)
+              if record.source_type ~= "istio-envoy-proxy-access-log" then
+                  return 0
+              end
+              if record.upstream_cluster:find("outbound|", 1) == 1 then
+                  record.bytes_sent_aligned = record.bytes_received
+                  record.bytes_received_aligned = record.bytes_sent
+              else
+                  record.bytes_sent_aligned = record.bytes_sent
+                  record.bytes_received_aligned = record.bytes_received
+              end
+              return 1, timestamp, record
+          end 
+
+  config:
+    service: |
+        [SERVICE]
+            Flush         1
+            Grace         5
+            Daemon        off
+            Log_Level     warn
+            Parsers_File  custom_parsers.conf
+            HTTP_Server   On
+            HTTP_Listen   0.0.0.0
+            HTTP_Port     2020
+
+    inputs: |
+        [INPUT]
+            Name              tail
+            Tag               kube.*
+            Path              /var/log/containers/*.log
+            # Excludes Kyma and Kubernetes logs. Remove this line if you are interested in these logs.
+            Exclude_Path      /var/log/containers/*_cls-fluent-bit_*.log,/var/log/containers/*_compass-system_*.log,/var/log/containers/*_istio-system_*.log,/var/log/containers/*_kube-node-lease_*.log,/var/log/containers/*_kube-public_*.log,/var/log/containers/*_kube-system_*.log,/var/log/containers/*_kyma-installer_*.log,/var/log/containers/*_kyma-integration_*.log,/var/log/containers/*_kyma-system_*.log
+            Refresh_Interval  10
+            Rotate_Wait       5
+            Skip_Long_Lines   On
+            DB                /var/log/flb_kube_loki.db
+            DB.sync           normal
+            Mem_Buf_Limit     5MB
+            exit_on_eof       false
+            multiline.parser  docker, cri
+            Key               log
+
+        [INPUT]
+            Name cpu
+            Tag  metric
+
+        [INPUT]
+            Name mem
+            Tag  metric
+
+    filters: |
+        [FILTER]
+            Name                kubernetes
+            Match               kube.*
+            Merge_Log           On
+            Keep_Log            On
+            Merge_Log_Trim      On
+            K8S-Logging.Parser  On
+            K8S-Logging.Exclude On
+            Buffer_Size         32k
+            Kube_URL            https://kubernetes.default.svc:443
+            Kube_Tag_Prefix     kube.var.log.containers.
+            Use_Journal         Off
+            Labels              On
+            Annotations         On
+
+        [FILTER]
+            Name record_modifier
+            Match *
+            Record cluster_identifier ${KUBERNETES_SERVICE_HOST}
+            Record fluent-bit cls-fluent-bit
+
+        [FILTER]
+            Name record_modifier
+            Match metric
+            Remove_key Swap.total
+            Remove_key Swap.used
+            Remove_key Swap.free
+            Record source_type metrics
+            Record kubernetes.pod_name ${HOSTNAME}
+            Record kubernetes.labels.app fluent-bit-metrics
+            Record kubernetes.namespace_name default
+
+        [FILTER]
+            Name   lua
+            Match  kube.*
+            script /fluent-bit/scripts/filter-script.lua
+            call   kubernetes_map_keys
+
+        [FILTER]
+            Name   lua
+            Match  *
+            script /fluent-bit/scripts/filter-script.lua
+            call   add_source_type
+
+        [FILTER]
+            Name   lua
+            Match  *
+            script /fluent-bit/scripts/filter-script.lua
+            call   add_aligned_sent_received
+
+        [FILTER]
+            Name   rewrite_tag
+            Match  kube.*
+            Rule   $source_type ^(istio-envoy-proxy-access-log)$ istio-envoy false
+
+    outputs: |
+      [OUTPUT]
+          Name forward
+          Match kube.*
+          Host fluentd
+          Port 24224
+          Retry_Limit false
+
+      [OUTPUT]
+          Name forward
+          Match metric
+          Host fluentd
+          Port 24224
+          Retry_Limit false
+
+      [OUTPUT]
+          Name forward
+          Match istio-envoy
+          Host fluentd
+          Port 24224
+          Retry_Limit false
+
+      # [OUTPUT]
+      #     Name                        http
+      #     Match                       kube.*
+      #     Host                        ${fluentd_HTTP_HOST}
+      #     Port                        443
+      #     URI                         /customindex/kyma
+      #     Format                      json
+      #     allow_duplicated_headers    true
+      #     HTTP_User                   ${fluentd_HTTP_USER}
+      #     HTTP_Passwd                 ${fluentd_HTTP_PASSWD}
+      #     tls                         On
+      #     tls.verify                  On
+
+      # [OUTPUT]
+      #     Name                        http
+      #     Match                       metric
+      #     Host                        ${fluentd_HTTP_HOST}
+      #     Port                        443
+      #     URI                         /customindex/metric-kyma
+      #     Format                      json
+      #     allow_duplicated_headers    true
+      #     HTTP_User                   ${fluentd_HTTP_USER}
+      #     HTTP_Passwd                 ${fluentd_HTTP_PASSWD}
+      #     tls                         On
+      #     tls.verify                  On
+
+      # [OUTPUT]
+      #     Name                        http
+      #     Match                       istio-envoy
+      #     Host                        ${fluentd_HTTP_HOST}
+      #     Port                        443
+      #     URI                         /customindex/istio-envoy-kyma
+      #     Format                      json
+      #     allow_duplicated_headers    true
+      #     HTTP_User                   ${fluentd_HTTP_USER}
+      #     HTTP_Passwd                 ${fluentd_HTTP_PASSWD}
+      #     tls                         On
+      #     tls.verify                  On
+
+    customParsers: |
+      [PARSER]
+          # http://rubular.com/r/tjUt3Awgg4
+          Name cri
+          Format regex
+          Regex ^(?<time>[^ ]+) (?<stream>stdout|stderr) (?<logtag>[^ ]*) (?<log>.*)$
+          Time_Key    time
+          Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+
+      [PARSER]
+          Name   apache
+          Format regex
+          Regex  ^(?<host>[^ ]*) [^ ]* (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")?$
+          Time_Key time
+          Time_Format %d/%b/%Y:%H:%M:%S %z
+
+      [PARSER]
+          Name   apache2
+          Format regex
+          Regex  ^(?<host>[^ ]*) [^ ]* (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^ ]*) +\S*)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>.*)")?$
+          Time_Key time
+          Time_Format %d/%b/%Y:%H:%M:%S %z
+
+      [PARSER]
+          Name   apache_error
+          Format regex
+          Regex  ^\[[^ ]* (?<time>[^\]]*)\] \[(?<level>[^\]]*)\](?: \[pid (?<pid>[^\]]*)\])?( \[client (?<client>[^\]]*)\])? (?<message>.*)$
+
+      [PARSER]
+          Name   nginx
+          Format regex
+          Regex ^(?<remote>[^ ]*) (?<host>[^ ]*) (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*)(?: "(?<referer>[^\"]*)" "(?<agent>[^\"]*)")
+          Time_Key time
+          Time_Format %d/%b/%Y:%H:%M:%S %z
+
+      [PARSER]
+          # https://rubular.com/r/IhIbCAIs7ImOkc
+          Name        k8s-nginx-ingress
+          Format      regex
+          Regex       ^(?<host>[^ ]*) - (?<user>[^ ]*) \[(?<time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)?" (?<code>[^ ]*) (?<size>[^ ]*) "(?<referer>[^\"]*)" "(?<agent>[^\"]*)" (?<request_length>[^ ]*) (?<request_time>[^ ]*) \[(?<proxy_upstream_name>[^ ]*)\] (\[(?<proxy_alternative_upstream_name>[^ ]*)\] )?(?<upstream_addr>[^ ]*) (?<upstream_response_length>[^ ]*) (?<upstream_response_time>[^ ]*) (?<upstream_status>[^ ]*) (?<reg_id>[^ ]*).*$
+          Time_Key    time
+          Time_Format %d/%b/%Y:%H:%M:%S %z
+
+      [PARSER]
+          Name   json
+          Format json
+          Time_Key time
+          Time_Format %d/%b/%Y:%H:%M:%S %z
+
+      [PARSER]
+          Name         docker
+          Format       json
+          Time_Key     time
+          Time_Format  %Y-%m-%dT%H:%M:%S.%L
+          Time_Keep    On
+          # --
+          # Since Fluent Bit v1.2, if you are parsing Docker logs and using
+          # the Kubernetes filter, it's not longer required to decode the
+          # 'log' key.
+          #
+          # Command      |  Decoder | Field | Optional Action
+          # =============|==================|=================
+          #Decode_Field_As    json     log
+
+      [PARSER]
+          Name        docker-daemon
+          Format      regex
+          Regex       time="(?<time>[^ ]*)" level=(?<level>[^ ]*) msg="(?<msg>[^ ].*)"
+          Time_Key    time
+          Time_Format %Y-%m-%dT%H:%M:%S.%L
+          Time_Keep   On
+
+      [PARSER]
+          Name        syslog-rfc5424
+          Format      regex
+          Regex       ^\<(?<pri>[0-9]{1,5})\>1 (?<time>[^ ]+) (?<host>[^ ]+) (?<ident>[^ ]+) (?<pid>[-0-9]+) (?<msgid>[^ ]+) (?<extradata>(\[(.*?)\]|-)) (?<message>.+)$
+          Time_Key    time
+          Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+          Time_Keep   On
+
+      [PARSER]
+          Name        syslog-rfc3164-local
+          Format      regex
+          Regex       ^\<(?<pri>[0-9]+)\>(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$
+          Time_Key    time
+          Time_Format %b %d %H:%M:%S
+          Time_Keep   On
+
+      [PARSER]
+          Name        syslog-rfc3164
+          Format      regex
+          Regex       /^\<(?<pri>[0-9]+)\>(?<time>[^ ]* {1,2}[^ ]* [^ ]*) (?<host>[^ ]*) (?<ident>[a-zA-Z0-9_\/\.\-]*)(?:\[(?<pid>[0-9]+)\])?(?:[^\:]*\:)? *(?<message>.*)$/
+          Time_Key    time
+          Time_Format %b %d %H:%M:%S
+          Time_Keep   On
+
+      [PARSER]
+          Name    mongodb
+          Format  regex
+          Regex   ^(?<time>[^ ]*)\s+(?<severity>\w)\s+(?<component>[^ ]+)\s+\[(?<context>[^\]]+)]\s+(?<message>.*?) *(?<ms>(\d+))?(:?ms)?$
+          Time_Format %Y-%m-%dT%H:%M:%S.%L
+          Time_Keep   On
+          Time_Key time
+
+      [PARSER]
+          # https://rubular.com/r/3fVxCrE5iFiZim
+          Name    envoy
+          Format  regex
+          Regex ^\[(?<start_time>[^\]]*)\] "(?<method>\S+)(?: +(?<path>[^\"]*?)(?: +\S*)?)? (?<protocol>\S+)" (?<code>[^ ]*) (?<response_flags>[^ ]*) (?<bytes_received>[^ ]*) (?<bytes_sent>[^ ]*) (?<duration>[^ ]*) (?<x_envoy_upstream_service_time>[^ ]*) "(?<x_forwarded_for>[^ ]*)" "(?<user_agent>[^\"]*)" "(?<request_id>[^\"]*)" "(?<authority>[^ ]*)" "(?<upstream_host>[^ ]*)"
+          Time_Format %Y-%m-%dT%H:%M:%S.%L%z
+          Time_Keep   On
+          Time_Key start_time
+
+      [PARSER]
+          Name    kube-custom
+          Format  regex
+          Regex   (?<tag>[^.]+)?\.?(?<pod_name>[a-z0-9](?:[-a-z0-9]*[a-z0-9])?(?:\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*)_(?<namespace_name>[^_]+)_(?<container_name>.+)-(?<docker_id>[a-z0-9]{64})\.log$
+
+      [PARSER]
+          Name              java
+          Format            regex
+          Regex             ^(?<time>\d{4}-\d{1,2}-\d{1,2} \d{1,2}:\d{1,2}:\d{1,2},\d{1,3}) (?<level>[^\s]+) \[(?<thread>.*)\] (?<message>.*)
+          Time_Key          time
+          Time_Format       %Y-%m-%d %H:%M:%S,%L
+
+  logLevel: warn

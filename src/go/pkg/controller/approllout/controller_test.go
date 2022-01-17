@@ -18,8 +18,9 @@ import (
 	"strings"
 	"testing"
 
-	apps "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	registry "github.com/googlecloudrobotics/core/src/go/pkg/apis/registry/v1alpha1"
+	apps "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	config "github.com/SAP/cloud-robotics/src/go/pkg/apis/config/v1alpha1"
+	registry "github.com/SAP/cloud-robotics/src/go/pkg/apis/registry/v1alpha1"
 	core "k8s.io/api/core/v1"
 	"k8s.io/helm/pkg/chartutil"
 	"sigs.k8s.io/yaml"
@@ -100,6 +101,7 @@ metadata:
 	unmarshalYAML(t, &expected, `
 metadata:
   name: foo-rollout-robot-robot1
+  namespace: default
   labels:
     lkey1: lval1
     cloudrobotics.com/robot-name: robot1
@@ -120,7 +122,9 @@ spec:
       foo2: bar2
 	`)
 
-	result := newRobotChartAssignment(&robot, &app, &rollout, &rollout.Spec.Robots[0], baseValues)
+	var tenant config.Tenant
+
+	result := newRobotChartAssignment(&robot, &app, &rollout, &tenant, &rollout.Spec.Robots[0], baseValues)
 	verifyChartAssignment(t, &expected, result)
 }
 
@@ -173,6 +177,7 @@ metadata:
 	unmarshalYAML(t, &expected, `
 metadata:
   name: foo-rollout-cloud
+  namespace: default
   labels:
     lkey1: lval1
   annotations:
@@ -193,7 +198,9 @@ spec:
       foo2: bar2
 	`)
 
-	result := newCloudChartAssignment(&app, &rollout, baseValues, &robot1, &robot2)
+	var tenant config.Tenant
+
+	result := newCloudChartAssignment(&app, &rollout, &tenant, baseValues, &robot1, &robot2)
 	verifyChartAssignment(t, &expected, result)
 }
 
@@ -263,6 +270,7 @@ spec:
 	unmarshalYAML(t, &expected[0], `
 metadata:
   name: foo-rollout-cloud
+  namespace: default
 spec:
   clusterName: cloud
   namespaceName: app-foo-rollout
@@ -278,6 +286,7 @@ spec:
 	unmarshalYAML(t, &expected[1], `
 metadata:
   name: foo-rollout-robot-robot1
+  namespace: default
   labels:
     cloudrobotics.com/robot-name: robot1
 spec:
@@ -293,6 +302,7 @@ spec:
 	unmarshalYAML(t, &expected[2], `
 metadata:
   name: foo-rollout-robot-robot3
+  namespace: default
   labels:
     cloudrobotics.com/robot-name: robot3
 spec:
@@ -307,7 +317,9 @@ spec:
       foo3: bar3
       `)
 
-	cas, err := generateChartAssignments(&app, &rollout, robots[:], baseValues)
+	var tenant config.Tenant
+
+	cas, err := generateChartAssignments(&app, &rollout, &tenant, robots[:], baseValues)
 	if err != nil {
 		t.Fatalf("Generate failed: %s", err)
 	}
@@ -365,6 +377,7 @@ spec:
 	unmarshalYAML(t, &expected, `
 metadata:
   name: foo-rollout-cloud
+  namespace: default
 spec:
   clusterName: cloud
   namespaceName: app-foo-rollout
@@ -375,7 +388,9 @@ spec:
       - name: robot1
 	`)
 
-	cas, err := generateChartAssignments(&app, &rollout, robots[:], nil)
+	var tenant config.Tenant
+
+	cas, err := generateChartAssignments(&app, &rollout, &tenant, robots[:], nil)
 	if err != nil {
 		t.Fatalf("Generate failed: %s", err)
 	}
@@ -413,6 +428,7 @@ metadata:
 	unmarshalYAML(t, &rollout, `
 metadata:
   name: foo-rollout
+  namespace: default
 spec:
   appName: foo
   robots:
@@ -423,7 +439,9 @@ spec:
         a: b
 	`)
 
-	_, err := generateChartAssignments(&app, &rollout, robots[:], nil)
+	var tenant config.Tenant
+
+	_, err := generateChartAssignments(&app, &rollout, &tenant, robots[:], nil)
 	if exp := errRobotSelectorOverlap("robot2"); err != exp {
 		t.Fatalf("expected error %q but got %q", exp, err)
 	}
@@ -434,18 +452,21 @@ func TestSetStatus(t *testing.T) {
 	unmarshalYAML(t, &ca1, `
 metadata:
   name: ca1
+  namespace: default
 status:
   phase: Failed
 	`)
 	unmarshalYAML(t, &ca2, `
 metadata:
   name: ca2
+  namespace: default
 status:
   phase: Settled
 	`)
 	unmarshalYAML(t, &ca3, `
 metadata:
   name: ca3
+  namespace: default
 status:
   phase: Ready
 	`)
@@ -467,11 +488,11 @@ status:
 	}
 	if c := ar.Status.Conditions[0]; c.Type != apps.AppRolloutConditionSettled ||
 		c.Status != core.ConditionFalse {
-		t.Errorf("Unexpected first condition %v, expected Settled=False")
+		t.Errorf("Unexpected first condition %v, expected Settled=False", c)
 	}
 	if c := ar.Status.Conditions[1]; c.Type != apps.AppRolloutConditionReady ||
 		c.Status != core.ConditionFalse {
-		t.Errorf("Unexpected second condition %v, expected Ready=False")
+		t.Errorf("Unexpected second condition %v, expected Ready=False", c)
 	}
 }
 

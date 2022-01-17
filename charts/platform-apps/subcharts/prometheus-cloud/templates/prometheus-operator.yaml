@@ -1,0 +1,10 @@
+# This includes all resources expanded from the prometheus-operator chart using
+# the values in ../prometheus-cloud.values.yaml.
+# Some pseudo-variables that were inserted there are replaced with actual runtime values.
+# TODO(rodrigoq): This severely limits how the end-user can customize the
+# prometheus deployment. How could we let them override prometheus-cloud.values.yaml?
+{{- $namespaces := include "tenant-namespaces" . | trimSuffix "," }}
+{{- $namespacesList4 := toYaml .Values.tenant_namespaces | indent 4 }}
+{{- $prometheusDomain := include "prometheus-domain" . }}
+
+{{ .Files.Get "files/prom.yaml" | replace "${PROMETHEUS_DOMAIN}" $prometheusDomain | replace "${TENANT}" .Values.tenant | replace "zzzgggzzzggg" .Values.tenant | replace "${HELM-NAMESPACE}" .Release.Namespace | replace "${TENANT_MAIN_NS}" .Values.tenant_main_namespace | replace "${TENANT_NAMESPACES}" $namespaces | replace "    - ${NS_LIST}" $namespacesList4 | replace "${LIMITS_MEMORY}" .Values.limits.memory | replace "${LIMITS_CPU}" .Values.limits.cpu | replace "${REQUESTS_STORAGE}" .Values.requests.storage | replace "${RETENTION_TIME}" .Values.retention.time | replace "${RETENTION_SIZE}" .Values.retention.size }}

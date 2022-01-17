@@ -17,8 +17,8 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	"github.com/googlecloudrobotics/core/src/go/pkg/client/versioned/scheme"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
+	"github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 
@@ -39,12 +39,12 @@ func (c *AppsV1alpha1Client) Apps() AppInterface {
 	return newApps(c)
 }
 
-func (c *AppsV1alpha1Client) AppRollouts() AppRolloutInterface {
-	return newAppRollouts(c)
+func (c *AppsV1alpha1Client) AppRollouts(namespace string) AppRolloutInterface {
+	return newAppRollouts(c, namespace)
 }
 
-func (c *AppsV1alpha1Client) ChartAssignments() ChartAssignmentInterface {
-	return newChartAssignments(c)
+func (c *AppsV1alpha1Client) ChartAssignments(namespace string) ChartAssignmentInterface {
+	return newChartAssignments(c, namespace)
 }
 
 func (c *AppsV1alpha1Client) ResourceSets() ResourceSetInterface {

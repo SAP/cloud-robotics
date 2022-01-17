@@ -1,0 +1,6 @@
+# This includes all resources expanded from the prometheus-operator chart using
+# the values in ../prometheus-cloud.values.yaml.
+# Some pseudo-variables that were inserted there are replaced with actual runtime values.
+{{- $prometheusDomain := include "prometheus-domain" . }}
+
+{{ .Files.Get "files/prom.yaml" | replace "${PROMETHEUS_DOMAIN}" $prometheusDomain | replace "${TENANT}" .Values.tenant | replace "zzzgggzzzggg" .Values.tenant | replace "${HELM-NAMESPACE}" .Release.Namespace }}

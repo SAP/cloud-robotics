@@ -15,7 +15,7 @@ var (
 	// gvr defines which resource we expect to be able to list in the
 	// remote cluster. We check for robots as the cr-syncer may only be
 	// authorized to list syncable resources.
-	gvr = schema.GroupVersionResource{"registry.cloudrobotics.com", "v1alpha1", "robots"}
+	gvr = schema.GroupVersionResource{Group: "registry.cloudrobotics.com", Version: "v1alpha1", Resource: "robots"}
 )
 
 // handler handles HTTP health requests.

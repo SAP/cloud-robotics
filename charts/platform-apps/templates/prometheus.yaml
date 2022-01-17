@@ -1,0 +1,10 @@
+apiVersion: apps.cloudrobotics.com/v1alpha1
+kind: App
+metadata:
+  name: prometheus-dev
+spec:
+  components:
+    cloud:
+      inline: {{ b64enc (.Files.Get "subcharts-packaged/prometheus-cloud-0.1.0.tgz") }}
+    robot: 
+      inline: {{ b64enc (.Files.Get "subcharts-packaged/prometheus-robot-0.1.0.tgz") }}

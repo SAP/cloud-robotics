@@ -17,8 +17,8 @@
 package v1alpha1
 
 import (
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/registry/v1alpha1"
-	"github.com/googlecloudrobotics/core/src/go/pkg/client/versioned/scheme"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/registry/v1alpha1"
+	"github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/scheme"
 	rest "k8s.io/client-go/rest"
 )
 

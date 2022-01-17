@@ -1,40 +1,28 @@
-# How to Contribute
+# Contributing to cloud-robotics
 
-We'd love to accept your patches and contributions to this project. There are
-just a few small guidelines you need to follow.
+You want to contribute to ewm-cloud-robotics? Welcome! Please read this document to understand what you can do:
+ * [Analyze Issues](#analyze-issues)
+ * [Reporting Security Issues](#reporting-security-issues)
+ * [Contribute Code](#contribute-code)
+ * [Reporting Security Issues](#reporting-security-issues)
+ * [Developer Certificate of Origin (DCO)](#developer-certificate-of-origin-dco)
 
-## Contributor License Agreement
+## Analyze Issues
+Analyzing issue reports can be a lot of effort. Any help is welcome!
+Go to [the Github issue tracker](https://github.com/SAP/cloud-robotics/issues?state=open) and find an open issue which needs additional work or a bugfix. Maybe you can even find and [contribute](#contribute-code) a bugfix?
 
-Contributions to this project must be accompanied by a Contributor License
-Agreement. You (or your employer) retain the copyright to your contribution;
-this simply gives us permission to use and redistribute your contributions as
-part of the project. Head over to <https://cla.developers.google.com/> to see
-your current agreements on file or to sign a new one.
+## Issue Handling Process
+When an issue is reported, a committer will look at it and either confirm it as a real issue (by giving the "approved" label), close it if it is not an issue, or ask for more details. Approved issues are then either assigned to a committer in GitHub, reported in our internal issue handling system, or left open as "contribution welcome" for easy or not urgent fixes. An issue that is about a real bug is closed as soon as the fix is committed.
 
-You generally only need to submit a CLA once, so if you've already submitted one
-(even if it was for a different project), you probably don't need to do it
-again.
+## Contribute Code
+You are welcome to contribute code to ewm-cloud-robotics in order to fix bugs or to implement new features.
 
-## Code reviews
+## Reporting Security Issues
+If you find a security issue, please act responsibly and report it not in the public issue tracker, but directly to us, so we can fix it before it can be exploited:
+ * SAP Customers: if the found security issue is not covered by a published security note, please report it by creating a customer message at https://service.sap.com/message.
+ * Researchers/non-Customers: please send the related information to secure@sap.com using [PGP for e-mail encryption](http://global.sap.com/pc/security/keyblock.txt).
+Also refer to the general [SAP security information page](https://www.sap.com/corporate/en/company/security.html).
 
-All submissions, including submissions by project members, require review. We
-use GitHub pull requests for this purpose. Consult
-[GitHub Help](https://help.github.com/articles/about-pull-requests/) for more
-information on using pull requests.
+## Developer Certificate of Origin (DCO)
 
-## Code formatting
-
-We have a pre-commit hook to check code formatting, which you can install with:
-
-```
-ln -s ../../scripts/pre-commit .git/hooks/
-```
-
-It depends on external tools for formatting, which you may be prompted to
-install when it first runs.
-
-## Community Guidelines
-
-This project follows
-[Google's Open Source Community Guidelines](https://opensource.google.com/conduct/).
-
+Due to legal reasons, contributors will be asked to accept a DCO before they submit the first pull request to this projects, this happens in an automated fashion during the submission process. SAP uses [the standard DCO text of the Linux Foundation](https://developercertificate.org/).

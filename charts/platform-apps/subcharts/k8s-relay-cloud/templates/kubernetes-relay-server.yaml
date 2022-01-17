@@ -1,0 +1,71 @@
+# Config according to https://github.com/brancz/kube-rbac-proxy/tree/master/examples/resource-attributes
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kubernetes-relay-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kubernetes-relay-server
+  template:
+    metadata:
+      labels:
+        app: kubernetes-relay-server
+      annotations:
+        # Checksum that pod restarts on config map changes
+        checksum/config: {{ include (print $.Template.BasePath "/kubernetes-relay-server-config.yaml") . | sha256sum }}
+    spec:
+      containers:
+      - name: server
+        image: "{{ .Values.registry }}/{{ .Values.images.http_relay_server }}"
+        args:
+        - --port=8080
+        livenessProbe:
+          httpGet:
+            path: /healthz
+            port: 8080
+          initialDelaySeconds: 15
+        ports:
+        - name: http
+          containerPort: 8080
+      - name: kubernetes-apiserver-proxy
+        image: quay.io/brancz/kube-rbac-proxy:v0.11.0
+        args:
+        - "--insecure-listen-address=0.0.0.0:8090"
+        - "--upstream=http://127.0.0.1:8080/"
+        - "--config-file=/etc/kube-rbac-proxy/config-file.yaml"
+        - "--logtostderr=true"
+        - "--v=4"
+        ports:
+        - containerPort: 8090
+          name: http
+        volumeMounts:
+        - name: config
+          mountPath: /etc/kube-rbac-proxy
+        securityContext:
+          allowPrivilegeEscalation: false
+      securityContext:
+        runAsUser: 65532
+        runAsGroup: 65532
+      volumes:
+      - name: config
+        configMap:
+          name: kubernetes-apiserver-proxy
+---
+# Create permissions for a virtual subresource of the robot CRD to be validated by kube-rbac-proxy
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: cloud-robotics:relay-kubernetes-server
+rules:
+- apiGroups:
+  - registry.cloudrobotics.com
+  resources:
+  - robots/relay-kubernetes-server
+  verbs:
+  - get
+  - create
+  - update
+  - patch
+  - delete

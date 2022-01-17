@@ -19,7 +19,7 @@ package fake
 import (
 	"context"
 
-	v1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
+	v1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	labels "k8s.io/apimachinery/pkg/labels"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -31,6 +31,7 @@ import (
 // FakeChartAssignments implements ChartAssignmentInterface
 type FakeChartAssignments struct {
 	Fake *FakeAppsV1alpha1
+	ns   string
 }
 
 var chartassignmentsResource = schema.GroupVersionResource{Group: "apps.cloudrobotics.com", Version: "v1alpha1", Resource: "chartassignments"}
@@ -40,7 +41,8 @@ var chartassignmentsKind = schema.GroupVersionKind{Group: "apps.cloudrobotics.co
 // Get takes name of the chartAssignment, and returns the corresponding chartAssignment object, and an error if there is any.
 func (c *FakeChartAssignments) Get(ctx context.Context, name string, options v1.GetOptions) (result *v1alpha1.ChartAssignment, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootGetAction(chartassignmentsResource, name), &v1alpha1.ChartAssignment{})
+		Invokes(testing.NewGetAction(chartassignmentsResource, c.ns, name), &v1alpha1.ChartAssignment{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -50,7 +52,8 @@ func (c *FakeChartAssignments) Get(ctx context.Context, name string, options v1.
 // List takes label and field selectors, and returns the list of ChartAssignments that match those selectors.
 func (c *FakeChartAssignments) List(ctx context.Context, opts v1.ListOptions) (result *v1alpha1.ChartAssignmentList, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootListAction(chartassignmentsResource, chartassignmentsKind, opts), &v1alpha1.ChartAssignmentList{})
+		Invokes(testing.NewListAction(chartassignmentsResource, chartassignmentsKind, c.ns, opts), &v1alpha1.ChartAssignmentList{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -71,13 +74,15 @@ func (c *FakeChartAssignments) List(ctx context.Context, opts v1.ListOptions) (r
 // Watch returns a watch.Interface that watches the requested chartAssignments.
 func (c *FakeChartAssignments) Watch(ctx context.Context, opts v1.ListOptions) (watch.Interface, error) {
 	return c.Fake.
-		InvokesWatch(testing.NewRootWatchAction(chartassignmentsResource, opts))
+		InvokesWatch(testing.NewWatchAction(chartassignmentsResource, c.ns, opts))
+
 }
 
 // Create takes the representation of a chartAssignment and creates it.  Returns the server's representation of the chartAssignment, and an error, if there is any.
 func (c *FakeChartAssignments) Create(ctx context.Context, chartAssignment *v1alpha1.ChartAssignment, opts v1.CreateOptions) (result *v1alpha1.ChartAssignment, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootCreateAction(chartassignmentsResource, chartAssignment), &v1alpha1.ChartAssignment{})
+		Invokes(testing.NewCreateAction(chartassignmentsResource, c.ns, chartAssignment), &v1alpha1.ChartAssignment{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -87,7 +92,8 @@ func (c *FakeChartAssignments) Create(ctx context.Context, chartAssignment *v1al
 // Update takes the representation of a chartAssignment and updates it. Returns the server's representation of the chartAssignment, and an error, if there is any.
 func (c *FakeChartAssignments) Update(ctx context.Context, chartAssignment *v1alpha1.ChartAssignment, opts v1.UpdateOptions) (result *v1alpha1.ChartAssignment, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateAction(chartassignmentsResource, chartAssignment), &v1alpha1.ChartAssignment{})
+		Invokes(testing.NewUpdateAction(chartassignmentsResource, c.ns, chartAssignment), &v1alpha1.ChartAssignment{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -98,7 +104,8 @@ func (c *FakeChartAssignments) Update(ctx context.Context, chartAssignment *v1al
 // Add a +genclient:noStatus comment above the type to avoid generating UpdateStatus().
 func (c *FakeChartAssignments) UpdateStatus(ctx context.Context, chartAssignment *v1alpha1.ChartAssignment, opts v1.UpdateOptions) (*v1alpha1.ChartAssignment, error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootUpdateSubresourceAction(chartassignmentsResource, "status", chartAssignment), &v1alpha1.ChartAssignment{})
+		Invokes(testing.NewUpdateSubresourceAction(chartassignmentsResource, "status", c.ns, chartAssignment), &v1alpha1.ChartAssignment{})
+
 	if obj == nil {
 		return nil, err
 	}
@@ -108,13 +115,14 @@ func (c *FakeChartAssignments) UpdateStatus(ctx context.Context, chartAssignment
 // Delete takes name of the chartAssignment and deletes it. Returns an error if one occurs.
 func (c *FakeChartAssignments) Delete(ctx context.Context, name string, opts v1.DeleteOptions) error {
 	_, err := c.Fake.
-		Invokes(testing.NewRootDeleteAction(chartassignmentsResource, name), &v1alpha1.ChartAssignment{})
+		Invokes(testing.NewDeleteAction(chartassignmentsResource, c.ns, name), &v1alpha1.ChartAssignment{})
+
 	return err
 }
 
 // DeleteCollection deletes a collection of objects.
 func (c *FakeChartAssignments) DeleteCollection(ctx context.Context, opts v1.DeleteOptions, listOpts v1.ListOptions) error {
-	action := testing.NewRootDeleteCollectionAction(chartassignmentsResource, listOpts)
+	action := testing.NewDeleteCollectionAction(chartassignmentsResource, c.ns, listOpts)
 
 	_, err := c.Fake.Invokes(action, &v1alpha1.ChartAssignmentList{})
 	return err
@@ -123,7 +131,8 @@ func (c *FakeChartAssignments) DeleteCollection(ctx context.Context, opts v1.Del
 // Patch applies the patch and returns the patched chartAssignment.
 func (c *FakeChartAssignments) Patch(ctx context.Context, name string, pt types.PatchType, data []byte, opts v1.PatchOptions, subresources ...string) (result *v1alpha1.ChartAssignment, err error) {
 	obj, err := c.Fake.
-		Invokes(testing.NewRootPatchSubresourceAction(chartassignmentsResource, name, pt, data, subresources...), &v1alpha1.ChartAssignment{})
+		Invokes(testing.NewPatchSubresourceAction(chartassignmentsResource, c.ns, name, pt, data, subresources...), &v1alpha1.ChartAssignment{})
+
 	if obj == nil {
 		return nil, err
 	}

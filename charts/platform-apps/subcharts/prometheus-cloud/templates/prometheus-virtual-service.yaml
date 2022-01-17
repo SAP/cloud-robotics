@@ -1,0 +1,53 @@
+apiVersion: networking.istio.io/v1beta1
+kind: VirtualService
+metadata:
+  name: prometheus
+spec:
+  hosts:
+  - {{ template "prometheus-domain" . }}
+  gateways:
+  - {{ .Values.tenant_gateway }}
+  http:
+  - name: prometheus-relay-server
+    match:
+    - uri:
+        prefix: /apis/core.prometheus-relay/server
+    rewrite:
+      uri: /server
+    route:
+    - destination:
+        port:
+          number: 80
+        host: prometheus-relay-server
+{{ if eq .Values.k8s_service_catalog "true" }}
+  - name: prometheus
+    match:
+    - uri:
+        prefix: /prometheus
+    route:
+    - destination:
+        port:
+          number: 80
+        # Via app-router
+        host: app-auth-proxy
+  - name: grafana
+    match:
+    - uri:
+        prefix: /grafana
+    route:
+    - destination:
+        port:
+          number: 80
+        # Via app-router
+        host: app-auth-proxy
+  - name: prometheus-oauth
+    match:
+    - uri:
+        prefix: /oauth
+    route:
+    - destination:
+        port:
+          number: 80
+        # Via app-router
+        host: app-auth-proxy
+{{ end }}

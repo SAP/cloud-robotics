@@ -1,0 +1,9 @@
+domain: "...ondemand.com"
+deploy_environment: "choose one of those GCP/Azure/AWS depending on kyma.cluster"
+registry: "registry.sap.com/my-project"
+k8s_service_catalog: "false"
+tenant_gateway: kyma-system/kyma-gateway
+
+images:
+  http_relay_server: "http-relay-server:latest"
+  app_auth_proxy: "app-auth-proxy:latest"

@@ -35,15 +35,14 @@ import (
 	"text/template"
 	"time"
 
+	crcapps "github.com/SAP/cloud-robotics/src/go/pkg/apis/apps/v1alpha1"
 	"github.com/cenkalti/backoff"
-	crcapps "github.com/googlecloudrobotics/core/src/go/pkg/apis/apps/v1alpha1"
-	"github.com/googlecloudrobotics/core/src/go/pkg/gcr"
 	"github.com/pkg/errors"
 	"golang.org/x/sync/errgroup"
 	apps "k8s.io/api/apps/v1"
 	core "k8s.io/api/core/v1"
 	rbac "k8s.io/api/rbac/v1"
-	k8serrors "k8s.io/apimachinery/pkg/api/errors"
+	// k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	meta "k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes/scheme"
@@ -408,49 +407,50 @@ func setupCluster(synkPath string, cluster *cluster) error {
 		return errors.Wrap(err, "create permissive role binding")
 	}
 
-	// Setup service account and create image pull secrets.
-	if token := os.Getenv("ACCESS_TOKEN"); token != "" {
-		// Use the same secret name as the GCR credential refresher would
-		// on robots.
-		// This makes some testing of components easier, that assume this
-		// secret to exist, e.g. ChartAssignment controller.
-		secret := &core.Secret{
-			ObjectMeta: meta.ObjectMeta{
-				Namespace: "default",
-				Name:      gcr.SecretName,
-			},
-			Type: core.SecretTypeDockercfg,
-			Data: map[string][]byte{
-				".dockercfg": gcr.DockerCfgJSON(token),
-			},
-		}
-		if err := c.Create(ctx, secret); err != nil {
-			return errors.Wrap(err, "create pull secret")
-		}
-		if err := backoff.Retry(
-			func() error {
-				var sa core.ServiceAccount
-				err := c.Get(ctx, client.ObjectKey{"default", "default"}, &sa)
-				if k8serrors.IsNotFound(err) {
-					return errors.New("not found")
-				} else if err != nil {
-					return backoff.Permanent(errors.Wrap(err, "get service account"))
-				}
-				sa.ImagePullSecrets = append(sa.ImagePullSecrets, core.LocalObjectReference{
-					Name: gcr.SecretName,
-				})
-				if err = c.Update(ctx, &sa); k8serrors.IsConflict(err) {
-					return fmt.Errorf("conflict")
-				} else if err != nil {
-					return backoff.Permanent(errors.Wrap(err, "update service account"))
-				}
-				return nil
-			},
-			backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Second), 60),
-		); err != nil {
-			return errors.Wrap(err, "inject pull secret")
-		}
-	}
+	// TODO: This needs to be reworked when kubetest is used again
+	// // Setup service account and create image pull secrets.
+	// if token := os.Getenv("ACCESS_TOKEN"); token != "" {
+	// 	// Use the same secret name as the GCR credential refresher would
+	// 	// on robots.
+	// 	// This makes some testing of components easier, that assume this
+	// 	// secret to exist, e.g. ChartAssignment controller.
+	// 	secret := &core.Secret{
+	// 		ObjectMeta: meta.ObjectMeta{
+	// 			Namespace: "default",
+	// 			Name:      gcr.SecretName,
+	// 		},
+	// 		Type: core.SecretTypeDockercfg,
+	// 		Data: map[string][]byte{
+	// 			".dockercfg": gcr.DockerCfgJSON(token),
+	// 		},
+	// 	}
+	// 	if err := c.Create(ctx, secret); err != nil {
+	// 		return errors.Wrap(err, "create pull secret")
+	// 	}
+	// 	if err := backoff.Retry(
+	// 		func() error {
+	// 			var sa core.ServiceAccount
+	// 			err := c.Get(ctx, client.ObjectKey{"default", "default"}, &sa)
+	// 			if k8serrors.IsNotFound(err) {
+	// 				return errors.New("not found")
+	// 			} else if err != nil {
+	// 				return backoff.Permanent(errors.Wrap(err, "get service account"))
+	// 			}
+	// 			sa.ImagePullSecrets = append(sa.ImagePullSecrets, core.LocalObjectReference{
+	// 				Name: gcr.SecretName,
+	// 			})
+	// 			if err = c.Update(ctx, &sa); k8serrors.IsConflict(err) {
+	// 				return fmt.Errorf("conflict")
+	// 			} else if err != nil {
+	// 				return backoff.Permanent(errors.Wrap(err, "update service account"))
+	// 			}
+	// 			return nil
+	// 		},
+	// 		backoff.WithMaxRetries(backoff.NewConstantBackOff(time.Second), 60),
+	// 	); err != nil {
+	// 		return errors.Wrap(err, "inject pull secret")
+	// 	}
+	// }
 
 	// Wait for a node to be ready, by checking for node taints (incl. NotReady)
 	// (context: b/128660997)

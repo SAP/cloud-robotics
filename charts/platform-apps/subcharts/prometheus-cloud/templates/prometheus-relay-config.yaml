@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prom-apiserver-proxy
+data:
+  config-file.yaml: |+
+    authorization:
+      resourceAttributes:
+        apiGroup: registry.cloudrobotics.com
+        resource: robots
+        subresource: relay-prometheus
+        namespace: {{ .Release.Namespace }}

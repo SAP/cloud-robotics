@@ -22,10 +22,13 @@ import (
 // +k8s:deepcopy-gen:interfaces=k8s.io/apimachinery/pkg/runtime.Object
 
 type Robot struct {
-	metav1.TypeMeta   `json:",inline"`
+	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ObjectMeta `json:"metadata,omitempty"`
 
-	Spec   RobotSpec   `json:"spec,omitempty"`
+	// +optional
+	Spec RobotSpec `json:"spec,omitempty"`
+	// +optional
 	Status RobotStatus `json:"status,omitempty"`
 }
 
@@ -33,14 +36,14 @@ type Robot struct {
 
 type RobotList struct {
 	metav1.TypeMeta `json:",inline"`
+	// +optional
 	metav1.ListMeta `json:"metadata,omitempty"`
 
 	Items []Robot `json:"items"`
 }
 
 type RobotSpec struct {
-	Type    string `json:"type,omitempty"`
-	Project string `json:"project,omitempty"`
+	Type string `json:"type,omitempty"`
 }
 
 type RobotStatus struct {

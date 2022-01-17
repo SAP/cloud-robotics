@@ -1,0 +1,8 @@
+
+dependencies:
+- name: fluent-bit
+  version: "0.18.1"
+  repository: "https://fluent.github.io/helm-charts"
+- name: base-crds
+  version: "0.1.0"
+  repository: "file://../base-crds"

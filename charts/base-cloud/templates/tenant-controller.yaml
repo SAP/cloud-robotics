@@ -1,0 +1,93 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: tenant-controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: tenant-controller
+  template:
+    metadata:
+      labels:
+        app: tenant-controller
+      annotations:
+        sidecar.istio.io/inject: "false"
+    spec:
+      serviceAccountName: tenant-controller
+      containers:
+      - name: tenant-controller
+        image: "{{ .Values.registry }}/{{ .Values.images.tenant_controller }}"
+        args:
+        - "--domain={{ .Values.domain }}"
+        - "--webhook-port=9876"
+        - "--cert-dir=/tls"
+        - "--default-gateway={{ .Values.default_gateway }}"
+        - "--tenant-specific-gateways={{ .Values.tenant_specific_gateways }}"
+        ports:
+        - name: webhook
+          containerPort: 9876
+        volumeMounts:
+        - mountPath: /tls
+          name: tls
+      volumes:
+      - name: tls
+        secret:
+          secretName: tenant-controller-tls
+      securityContext:
+        runAsUser: 65532
+        runAsGroup: 65532
+---
+# The tenant controller runs admission webhooks, which need to be served via TLS.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: tenant-controller
+spec:
+  secretName: tenant-controller-tls
+  commonName: tenant-controller.{{ .Release.Namespace }}.svc
+  dnsNames:
+    - tenant-controller.{{ .Release.Namespace }}.svc
+    - tenant-controller.{{ .Release.Namespace }}.svc.cluster.local
+  issuerRef:
+    kind: ClusterIssuer
+    name: cluster-authority
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: tenant-controller
+spec:
+  type: ClusterIP
+  ports:
+  - port: 443
+    protocol: TCP
+    targetPort: webhook
+  selector:
+    app: tenant-controller
+---
+apiVersion: admissionregistration.k8s.io/v1
+kind: ValidatingWebhookConfiguration
+metadata:
+  name: tenant-controller
+webhooks:
+- name: tenants.config.cloudrobotics.com
+  admissionReviewVersions: ["v1"]
+  failurePolicy: Fail
+  clientConfig:
+    service:
+      namespace: {{ .Release.Namespace }}
+      name: tenant-controller
+      path: /tenant/validate
+    caBundle: {{ .Values.certificate_authority.crt }}
+  rules:
+  - apiGroups:
+    - config.cloudrobotics.com
+    apiVersions:
+    - v1alpha1
+    operations:
+    - CREATE
+    - UPDATE
+    resources:
+    - tenants
+  sideEffects: None

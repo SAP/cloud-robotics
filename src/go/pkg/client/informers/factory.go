@@ -21,10 +21,12 @@ import (
 	sync "sync"
 	time "time"
 
-	apps "github.com/googlecloudrobotics/core/src/go/pkg/client/informers/apps"
-	internalinterfaces "github.com/googlecloudrobotics/core/src/go/pkg/client/informers/internalinterfaces"
-	registry "github.com/googlecloudrobotics/core/src/go/pkg/client/informers/registry"
-	versioned "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned"
+	apps "github.com/SAP/cloud-robotics/src/go/pkg/client/informers/apps"
+	config "github.com/SAP/cloud-robotics/src/go/pkg/client/informers/config"
+	internalinterfaces "github.com/SAP/cloud-robotics/src/go/pkg/client/informers/internalinterfaces"
+	mission "github.com/SAP/cloud-robotics/src/go/pkg/client/informers/mission"
+	registry "github.com/SAP/cloud-robotics/src/go/pkg/client/informers/registry"
+	versioned "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	runtime "k8s.io/apimachinery/pkg/runtime"
 	schema "k8s.io/apimachinery/pkg/runtime/schema"
@@ -172,11 +174,21 @@ type SharedInformerFactory interface {
 	WaitForCacheSync(stopCh <-chan struct{}) map[reflect.Type]bool
 
 	Apps() apps.Interface
+	Config() config.Interface
+	Mission() mission.Interface
 	Registry() registry.Interface
 }
 
 func (f *sharedInformerFactory) Apps() apps.Interface {
 	return apps.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Config() config.Interface {
+	return config.New(f, f.namespace, f.tweakListOptions)
+}
+
+func (f *sharedInformerFactory) Mission() mission.Interface {
+	return mission.New(f, f.namespace, f.tweakListOptions)
 }
 
 func (f *sharedInformerFactory) Registry() registry.Interface {

@@ -1,7 +1,0 @@
-project: "my-gcp-project"
-registry: "gcr.io/my-gcp-project"
-
-robot:
-  name: ""
-
-crd_spec_source: "cloud"

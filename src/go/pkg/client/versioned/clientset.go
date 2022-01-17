@@ -19,8 +19,10 @@ package versioned
 import (
 	"fmt"
 
-	appsv1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned/typed/apps/v1alpha1"
-	registryv1alpha1 "github.com/googlecloudrobotics/core/src/go/pkg/client/versioned/typed/registry/v1alpha1"
+	appsv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/apps/v1alpha1"
+	configv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/config/v1alpha1"
+	missionv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/mission/v1alpha1"
+	registryv1alpha1 "github.com/SAP/cloud-robotics/src/go/pkg/client/versioned/typed/registry/v1alpha1"
 	discovery "k8s.io/client-go/discovery"
 	rest "k8s.io/client-go/rest"
 	flowcontrol "k8s.io/client-go/util/flowcontrol"
@@ -29,6 +31,8 @@ import (
 type Interface interface {
 	Discovery() discovery.DiscoveryInterface
 	AppsV1alpha1() appsv1alpha1.AppsV1alpha1Interface
+	ConfigV1alpha1() configv1alpha1.ConfigV1alpha1Interface
+	MissionV1alpha1() missionv1alpha1.MissionV1alpha1Interface
 	RegistryV1alpha1() registryv1alpha1.RegistryV1alpha1Interface
 }
 
@@ -37,12 +41,24 @@ type Interface interface {
 type Clientset struct {
 	*discovery.DiscoveryClient
 	appsV1alpha1     *appsv1alpha1.AppsV1alpha1Client
+	configV1alpha1   *configv1alpha1.ConfigV1alpha1Client
+	missionV1alpha1  *missionv1alpha1.MissionV1alpha1Client
 	registryV1alpha1 *registryv1alpha1.RegistryV1alpha1Client
 }
 
 // AppsV1alpha1 retrieves the AppsV1alpha1Client
 func (c *Clientset) AppsV1alpha1() appsv1alpha1.AppsV1alpha1Interface {
 	return c.appsV1alpha1
+}
+
+// ConfigV1alpha1 retrieves the ConfigV1alpha1Client
+func (c *Clientset) ConfigV1alpha1() configv1alpha1.ConfigV1alpha1Interface {
+	return c.configV1alpha1
+}
+
+// MissionV1alpha1 retrieves the MissionV1alpha1Client
+func (c *Clientset) MissionV1alpha1() missionv1alpha1.MissionV1alpha1Interface {
+	return c.missionV1alpha1
 }
 
 // RegistryV1alpha1 retrieves the RegistryV1alpha1Client
@@ -75,6 +91,14 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 	if err != nil {
 		return nil, err
 	}
+	cs.configV1alpha1, err = configv1alpha1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
+	cs.missionV1alpha1, err = missionv1alpha1.NewForConfig(&configShallowCopy)
+	if err != nil {
+		return nil, err
+	}
 	cs.registryV1alpha1, err = registryv1alpha1.NewForConfig(&configShallowCopy)
 	if err != nil {
 		return nil, err
@@ -92,6 +116,8 @@ func NewForConfig(c *rest.Config) (*Clientset, error) {
 func NewForConfigOrDie(c *rest.Config) *Clientset {
 	var cs Clientset
 	cs.appsV1alpha1 = appsv1alpha1.NewForConfigOrDie(c)
+	cs.configV1alpha1 = configv1alpha1.NewForConfigOrDie(c)
+	cs.missionV1alpha1 = missionv1alpha1.NewForConfigOrDie(c)
 	cs.registryV1alpha1 = registryv1alpha1.NewForConfigOrDie(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClientForConfigOrDie(c)
@@ -102,6 +128,8 @@ func NewForConfigOrDie(c *rest.Config) *Clientset {
 func New(c rest.Interface) *Clientset {
 	var cs Clientset
 	cs.appsV1alpha1 = appsv1alpha1.New(c)
+	cs.configV1alpha1 = configv1alpha1.New(c)
+	cs.missionV1alpha1 = missionv1alpha1.New(c)
 	cs.registryV1alpha1 = registryv1alpha1.New(c)
 
 	cs.DiscoveryClient = discovery.NewDiscoveryClient(c)

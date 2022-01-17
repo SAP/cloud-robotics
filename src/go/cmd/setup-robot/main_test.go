@@ -23,7 +23,8 @@ import (
 	"reflect"
 	"testing"
 
-	registry "github.com/googlecloudrobotics/core/src/go/pkg/apis/registry/v1alpha1"
+	registry "github.com/SAP/cloud-robotics/src/go/pkg/apis/registry/v1alpha1"
+	"github.com/SAP/cloud-robotics/src/go/pkg/coretools"
 	corev1 "k8s.io/api/core/v1"
 	k8serrors "k8s.io/apimachinery/pkg/api/errors"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -126,6 +127,8 @@ func TestCheckRobotName_SucceedsWhenCRDNotFound(t *testing.T) {
 	ctx := context.Background()
 	sc := runtime.NewScheme()
 	*robotName = "robot_name"
+	mainNamespace = "t-test"
+	robotConfigNamespace = coretools.RobotConfigNamespace(mainNamespace)
 
 	c := dynfake.NewSimpleDynamicClientWithCustomListKinds(sc,
 		map[schema.GroupVersionResource]string{
@@ -135,7 +138,7 @@ func TestCheckRobotName_SucceedsWhenCRDNotFound(t *testing.T) {
 	// In a fresh cluster, the Robot CRD doesn't exist, so GET robots
 	// returns a 404.
 	c.PrependReactor("list", "robots", func(k8stest.Action) (bool, runtime.Object, error) {
-		return true, nil, &k8serrors.StatusError{metav1.Status{
+		return true, nil, &k8serrors.StatusError{ErrStatus: metav1.Status{
 			Status:  metav1.StatusFailure,
 			Code:    http.StatusNotFound,
 			Reason:  metav1.StatusReasonNotFound,
@@ -153,6 +156,8 @@ func TestCheckRobotName(t *testing.T) {
 	sc := runtime.NewScheme()
 	registry.AddToScheme(sc)
 	*robotName = "robot_name"
+	mainNamespace = "t-test"
+	robotConfigNamespace = coretools.RobotConfigNamespace(mainNamespace)
 
 	tests := []struct {
 		desc      string
@@ -173,7 +178,7 @@ func TestCheckRobotName(t *testing.T) {
 						"kind":       "Robot",
 						"metadata": map[string]interface{}{
 							"name":      *robotName,
-							"namespace": "default",
+							"namespace": "t-test",
 						},
 					},
 				},
@@ -189,7 +194,7 @@ func TestCheckRobotName(t *testing.T) {
 						"kind":       "Robot",
 						"metadata": map[string]interface{}{
 							"name":      "other_name",
-							"namespace": "default",
+							"namespace": "t-test",
 						},
 					},
 				},
@@ -222,6 +227,21 @@ func TestCreateOrUpdateRobot_Succeeds(t *testing.T) {
 	sc := runtime.NewScheme()
 	registry.AddToScheme(sc)
 	*robotName = "robot_name"
+	mainNamespace = "t-test"
+	robotConfigNamespace = coretools.RobotConfigNamespace(mainNamespace)
+
+	robotConfig := &corev1.ConfigMap{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      coretools.RobotSetupConfigmap,
+			Namespace: coretools.RobotConfigNamespace(*tenant),
+		},
+		Data: map[string]string{
+			"setup_robot_crc":                   "0.1.0_xyz",
+			"chart_assignment_controller_image": "chart_assignment_controller:latest",
+			"cr_syncer_image":                   "cr_syncer:latest",
+			"metadata_server_image":             "metadata-server:latest",
+		},
+	}
 
 	tests := []struct {
 		desc       string
@@ -235,7 +255,7 @@ func TestCreateOrUpdateRobot_Succeeds(t *testing.T) {
 			&registry.Robot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      "other_robot",
-					Namespace: "default",
+					Namespace: "t-test",
 				},
 			},
 			map[string]string{
@@ -249,7 +269,7 @@ func TestCreateOrUpdateRobot_Succeeds(t *testing.T) {
 			&registry.Robot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      *robotName,
-					Namespace: "default",
+					Namespace: "t-test",
 				},
 			},
 			map[string]string{
@@ -263,7 +283,7 @@ func TestCreateOrUpdateRobot_Succeeds(t *testing.T) {
 			&registry.Robot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      *robotName,
-					Namespace: "default",
+					Namespace: "t-test",
 					Labels:    map[string]string{"cloudrobotics.com/ssh-port": "22"},
 				},
 			},
@@ -279,7 +299,7 @@ func TestCreateOrUpdateRobot_Succeeds(t *testing.T) {
 			&registry.Robot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      *robotName,
-					Namespace: "default",
+					Namespace: "t-test",
 					Labels:    map[string]string{"cloudrobotics.com/master-host": hostname},
 				},
 			},
@@ -294,7 +314,7 @@ func TestCreateOrUpdateRobot_Succeeds(t *testing.T) {
 			&registry.Robot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      *robotName,
-					Namespace: "default",
+					Namespace: "t-test",
 					Labels:    map[string]string{"cloudrobotics.com/master-host": "other-host"},
 				},
 			},
@@ -311,7 +331,7 @@ func TestCreateOrUpdateRobot_Succeeds(t *testing.T) {
 			&registry.Robot{
 				ObjectMeta: metav1.ObjectMeta{
 					Name:      *robotName,
-					Namespace: "default",
+					Namespace: "t-test",
 					Labels:    map[string]string{"cloudrobotics.com/master-host": "other-host"},
 				},
 			},
@@ -325,11 +345,11 @@ func TestCreateOrUpdateRobot_Succeeds(t *testing.T) {
 		t.Run(tc.desc, func(t *testing.T) {
 			c := dynfake.NewSimpleDynamicClient(sc, tc.robot)
 			annotations := map[string]string{}
-			if err := createOrUpdateRobot(ctx, c, tc.labels, annotations); err != nil {
+			if err := createOrUpdateRobot(ctx, c, tc.labels, annotations, robotConfig); err != nil {
 				t.Fatalf("createOrUpdateRobot() failed unexpectedly:  %v", err)
 			}
 
-			robotClient := c.Resource(robotGVR).Namespace("default")
+			robotClient := c.Resource(robotGVR).Namespace("t-test")
 			robot, err := robotClient.Get(ctx, *robotName, metav1.GetOptions{})
 			if err != nil {
 				t.Fatalf("Failed getting robot: %v", err)

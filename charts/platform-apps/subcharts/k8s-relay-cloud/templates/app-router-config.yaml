@@ -1,0 +1,41 @@
+{{ if eq .Values.k8s_service_catalog "true" }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-auth-proxy
+  labels:
+    app: app-auth-proxy
+data:
+  config.json: |
+    {
+      "routes": [{
+              "path": "/apis/core.kubernetes-relay/client",
+              "priority": 10,
+              "protected": true,
+              "remove_from_path": "/apis/core.kubernetes-relay",
+              "target": "http://kubernetes-relay-server:8080",
+              "forward_auth_token": false,
+              "http_method_scopes": [{
+                "http_method": "*",
+                "scope": "$XSAPPNAME.Edit"
+            }]
+          }],
+{{ if .Values.tenant_domain }}
+      "redirect_uri": "https://k8s-relay.{{ .Values.tenant_domain }}/oauth/callback",
+{{ else }}
+      "redirect_uri": "https://{{ .Values.tenant_main_namespace }}-k8s-relay.{{ .Values.domain }}/oauth/callback",
+{{ end }}
+      "debug": false,
+      "redis_store": {
+        "addr": "",
+        "password": "",
+        "db": 0
+      },
+      "cookie":{
+          "session_name": "kubernetes-relay-session",
+          "max_age_seconds": 900,
+          "key": "{{ .Values.cookie_secret }}",
+          "httponly": true
+      }
+    }
+{{ end }}

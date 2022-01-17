@@ -32,46 +32,42 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strconv"
 	"strings"
 	"time"
 
+	"github.com/SAP/cloud-robotics/src/go/pkg/coretools"
+	"github.com/SAP/cloud-robotics/src/go/pkg/kubeutils"
+	"github.com/SAP/cloud-robotics/src/go/pkg/robotauth"
 	"github.com/cenkalti/backoff"
-	"github.com/googlecloudrobotics/core/src/go/pkg/configutil"
-	"github.com/googlecloudrobotics/core/src/go/pkg/gcr"
-	"github.com/googlecloudrobotics/core/src/go/pkg/kubeutils"
-	"github.com/googlecloudrobotics/core/src/go/pkg/robotauth"
-	"github.com/googlecloudrobotics/core/src/go/pkg/setup"
 	"github.com/pkg/errors"
 	flag "github.com/spf13/pflag"
 	"golang.org/x/oauth2"
-	"google.golang.org/api/option"
 	corev1 "k8s.io/api/core/v1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/validation"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1/unstructured"
 	"k8s.io/apimachinery/pkg/runtime/schema"
+	"k8s.io/apimachinery/pkg/types"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 )
 
 var (
-	robotName      = new(string)
-	project        = flag.String("project", "", "Project ID for the Google Cloud Platform")
-	robotType      = flag.String("robot-type", "", "Robot type. Optional if the robot is already registered.")
-	registryID     = flag.String("registry-id", "", "The ID used when writing the public key to the cloud registry. Default: robot-<robot-name>.")
-	labels         = flag.String("labels", "", "Robot labels. Optional if the robot is already registered.")
-	annotations    = flag.String("annotations", "", "Robot annotations. Optional if the robot is already registered.")
-	crSyncer       = flag.Bool("cr-syncer", true, "Set up the cr-syncer, and create a Robot CR in the cloud cluster.")
-	fluentd        = flag.Bool("fluentd", true, "Set up fluentd to upload logs to Stackdriver.")
-	dockerDataRoot = flag.String("docker-data-root", "/var/lib/docker", "This should match data-root in /etc/docker/daemon.json.")
-	podCIDR        = flag.String("pod-cidr", "192.168.9.0/24",
+	robotName            = new(string)
+	mainNamespace        string
+	robotConfigNamespace string
+	domain               = flag.String("domain", "", "Domain name of Cloud Robotics Kyma Cluster")
+	tenant               = flag.String("tenant", "", "Tenant name in Cloud Robotics Kyma Cluster")
+	robotType            = flag.String("robot-type", "", "Robot type. Optional if the robot is already registered.")
+	labels               = flag.String("labels", "", "Robot labels. Optional if the robot is already registered.")
+	annotations          = flag.String("annotations", "", "Robot annotations. Optional if the robot is already registered.")
+	dockerDataRoot       = flag.String("docker-data-root", "/var/lib/docker", "This should match data-root in /etc/docker/daemon.json.")
+	podCIDR              = flag.String("pod-cidr", "192.168.9.0/24",
 		"The range of Pod IP addresses in the cluster. This should match the CNI "+
 			"configuration (eg Cilium's clusterPoolIPv4PodCIDR). If this is incorrect, "+
 			"pods will get 403 Forbidden when trying to reach the metadata server.")
-	robotAuthentication = flag.Bool("robot-authentication", true, "Set up robot authentication.")
 
 	robotGVR = schema.GroupVersionResource{
 		Group:    "registry.cloudrobotics.com",
@@ -88,12 +84,12 @@ const (
 	numServiceRetries = 6
 	// commaSentinel is used when parsing labels or annotations.
 	commaSentinel = "_COMMA_SENTINEL_"
-	baseNamespace = "default"
+	baseNamespace = metav1.NamespaceDefault
 )
 
 func parseFlags() {
 	flag.Usage = func() {
-		fmt.Fprintln(os.Stderr, "Usage: setup-robot <robot-name> --project <project-id> [OPTIONS]")
+		fmt.Fprintln(os.Stderr, "Usage: setup-robot <robot-name> [OPTIONS]")
 		fmt.Fprintln(os.Stderr, "  robot-name")
 		fmt.Fprintln(os.Stderr, "        Robot name")
 		fmt.Fprintln(os.Stderr, "")
@@ -113,13 +109,9 @@ func parseFlags() {
 
 	*robotName = flag.Arg(0)
 
-	if *project == "" {
-		flag.Usage()
-		log.Fatal("ERROR: --project is required.")
-	}
-	if *registryID == "" {
-		*registryID = fmt.Sprintf("robot-%s", *robotName)
-	}
+	mainNamespace = coretools.TenantMainNamespace(*tenant)
+	robotConfigNamespace = coretools.RobotConfigNamespace(mainNamespace)
+
 }
 
 func newExponentialBackoff(initialInterval time.Duration, multiplier float64, retries uint64) backoff.BackOff {
@@ -190,7 +182,7 @@ func waitForService(client *http.Client, url string, retries uint64) error {
 // with a different name. It is not safe to rerun setup-robot with a different
 // name as the chart-assignment-controller doesn't allow the clusterName field to change.
 func checkRobotName(ctx context.Context, client dynamic.Interface) error {
-	robots, err := client.Resource(robotGVR).Namespace("default").List(ctx, metav1.ListOptions{})
+	robots, err := client.Resource(robotGVR).Namespace(mainNamespace).List(ctx, metav1.ListOptions{})
 	if err != nil {
 		if apierrors.IsNotFound(err) {
 			return nil
@@ -248,27 +240,20 @@ func main() {
 		log.Fatalf("Invalid annotations %q: %s", *annotations, err)
 	}
 
-	// Wait for in-cluster DNS to become available, otherwise
-	// configutil.ReadConfig() may fail.
-	if err := waitForDNS("storage.googleapis.com", numDNSRetries); err != nil {
-		log.Fatalf("Failed to resolve storage.googleapis.com: %s. Please retry in 5 minutes.", err)
-	}
-
 	// Set up the OAuth2 token source.
 	tokenSource := oauth2.StaticTokenSource(&oauth2.Token{AccessToken: envToken})
 
-	vars, err := configutil.ReadConfig(*project, option.WithTokenSource(tokenSource))
-	if err != nil {
-		log.Fatal("Failed to read config for project: ", err)
-	}
-	domain, ok := vars["CLOUD_ROBOTICS_DOMAIN"]
-	if !ok || domain == "" {
-		domain = fmt.Sprintf("www.endpoints.%s.cloud.goog", *project)
+	remoteServer := fmt.Sprintf("k8s.%s", *domain)
+
+	// Wait until we can resolve the cluster domain.
+	if err := waitForDNS(remoteServer, numDNSRetries); err != nil {
+		log.Fatalf("Failed to resolve cloud cluster domain %s: %s. Please retry in 5 minutes.", remoteServer, err)
 	}
 
-	// Wait until we can resolve the project domain. This may require DNS propagation.
-	if err := waitForDNS(domain, numDNSRetries); err != nil {
-		log.Fatalf("Failed to resolve cloud cluster: %s. Please retry in 5 minutes.", err)
+	httpClient := oauth2.NewClient(context.Background(), tokenSource)
+
+	if err := waitForService(httpClient, fmt.Sprintf("https://%s", remoteServer), numServiceRetries); err != nil {
+		log.Fatalf("Failed to connect to the cloud cluster: %s. Please retry in 5 minutes.", err)
 	}
 
 	// Connect to the surrounding k8s cluster.
@@ -282,10 +267,13 @@ func main() {
 	}
 	if _, err := k8sLocalClientSet.AppsV1().Deployments("default").Get(ctx, "app-rollout-controller", metav1.GetOptions{}); err == nil {
 		// It's important to avoid deploying the cloud-robotics
-		// metadata-server in the same cluster as the token-vendor,
-		// otherwise we'll break auth for all robot clusters.
-		log.Fatal("The local context contains a app-rollout-controller deployment. It is not safe to run robot setup on a GKE cloud cluster.")
+		// metadata-server & cr-syncer in the main cluster. This might break the setup.
+		log.Fatal("The local context contains a app-rollout-controller deployment. It is not safe to run robot setup on a Kyma cloud cluster.")
 	}
+	if err := ensureTenantMainNamespace(ctx, k8sLocalClientSet); err != nil {
+		log.Fatal("Failed to ensure tenant main namespace: ", err)
+	}
+
 	k8sLocalDynamic, err := dynamic.NewForConfig(localConfig)
 	if err != nil {
 		log.Fatal("Failed to create dynamic client set: ", err)
@@ -294,51 +282,44 @@ func main() {
 		log.Fatal("Error: ", err)
 	}
 
-	if *crSyncer {
-		// Set up client for cloud k8s cluster, so we can create/update
-		// the Robot CR there.
-		k8sCloudCfg := kubeutils.BuildCloudKubernetesConfig(tokenSource, domain)
-		k8sDynamicClient, err := dynamic.NewForConfig(k8sCloudCfg)
-		if err != nil {
-			log.Fatalf("Failed to create k8s client: %v", err)
-		}
-		if err := createOrUpdateRobot(ctx, k8sDynamicClient, parsedLabels, parsedAnnotations); err != nil {
-			log.Fatalf("Failed to update robot CR %v: %v", *robotName, err)
-		}
-	} else {
-		// Creating a Robot CR would make the app-rollout-controller
-		// create ChartAssignments in the cloud, but if the cr-syncer
-		// is disabled, these would not be synced/installed. Avoiding
-		// CR creation keeps the cloud cluster "cleaner".
-		log.Printf("cr-syncer disabled: skipping Robot CR creation")
+	k8sCloudCfg := kubeutils.BuildCloudKubernetesConfig(tokenSource, remoteServer)
+
+	// Authenticating robot-setup in upstream cluster using robot-setup service account API token
+	k8sClientSet, err := kubernetes.NewForConfig(k8sCloudCfg)
+	if err != nil {
+		log.Fatalf("Failed to create k8s client: %v", err)
+	}
+	token, err := waitForServiceAccountToken(ctx, k8sClientSet, numServiceRetries)
+	if err != nil {
+		log.Fatalf("Getting service account token for robot in upstream cluster failed: %v", err)
 	}
 
-	httpClient := oauth2.NewClient(context.Background(), tokenSource)
+	robotSetupConfig, err := getRobotSetupConfigmap(ctx, k8sClientSet, numServiceRetries)
+	if err != nil {
+		log.Fatalf("Getting robot-setup configmap in upstream cluster failed: %v", err)
+	}
 
-	if *robotAuthentication {
-		// Set up robot authentication.
-		auth := &robotauth.RobotAuth{
-			RobotName:           *robotName,
-			ProjectId:           *project,
-			Domain:              domain,
-			PublicKeyRegistryId: *registryID,
-		}
+	// Set up client for cloud k8s cluster (needed only to obtain list of robots).
+	k8sDynamicClient, err := dynamic.NewForConfig(k8sCloudCfg)
+	if err != nil {
+		log.Fatalf("Failed to create k8s client: %v", err)
+	}
+	if err := createOrUpdateRobot(ctx, k8sDynamicClient, parsedLabels, parsedAnnotations, robotSetupConfig); err != nil {
+		log.Fatalf("Failed to update robot CR %v: %v", *robotName, err)
+	}
 
-		// Make sure the cloud cluster take requests
-		url := fmt.Sprintf("https://%s/apis/core.token-vendor/v1/public-key.read", domain)
-		if err := waitForService(httpClient, url, numServiceRetries); err != nil {
-			log.Fatalf("Failed to connect to the cloud cluster: %s. Please retry in 5 minutes.", err)
-		}
+	// Set up robot authentication.
+	auth := &robotauth.RobotAuth{
+		RobotName:         *robotName,
+		Domain:            *domain,
+		UpstreamAuthToken: *token,
+	}
 
-		if err := setup.CreateAndPublishCredentialsToCloud(httpClient, auth); err != nil {
-			log.Fatal(err)
-		}
-		if err := storeInK8sSecret(ctx, k8sLocalClientSet, baseNamespace, auth); err != nil {
-			log.Fatal(fmt.Errorf("Failed to write auth secret: %v", err))
-		}
-		if err := gcr.UpdateGcrCredentials(ctx, k8sLocalClientSet, auth); err != nil {
-			log.Fatal(err)
-		}
+	if err := storeInK8sSecret(ctx, k8sLocalClientSet, baseNamespace, auth); err != nil {
+		log.Fatal(fmt.Errorf("failed to write auth secret: %v", err))
+	}
+	if err := syncDockerSecret(ctx, k8sClientSet, k8sLocalClientSet); err != nil {
+		log.Fatal(err)
 	}
 
 	// ensure tls certs
@@ -353,10 +334,9 @@ func main() {
 		log.Fatalf("Synk init failed: %v. Synk output:\n%s\n", err, output)
 	}
 
-	appManagement := configutil.GetBoolean(vars, "APP_MANAGEMENT", true)
 	// Use "robot" as a suffix for consistency for Synk deployments.
-	installChartOrDie(ctx, k8sLocalClientSet, domain, registry, "base-robot", baseNamespace,
-		"base-robot-0.0.1.tgz", whCert, whKey, appManagement)
+	installChartOrDie(ctx, k8sLocalClientSet, *domain, registry, "base-robot", baseNamespace,
+		"base-robot-0.1.0.tgz", whCert, whKey, robotSetupConfig)
 	log.Println("Setup complete")
 }
 
@@ -435,7 +415,7 @@ func helmValuesStringFromMap(varMap map[string]string) string {
 }
 
 // installChartOrDie installs a chart using Synk.
-func installChartOrDie(ctx context.Context, cs *kubernetes.Clientset, domain, registry, name, namespace, chartPath, whCert, whKey string, appManagement bool) {
+func installChartOrDie(ctx context.Context, cs *kubernetes.Clientset, domain, registry, name, namespace, chartPath, whCert, whKey string, robotSetupConfig *corev1.ConfigMap) {
 	// ensure namespace for chart exists
 	if _, err := cs.CoreV1().Namespaces().Create(ctx,
 		&corev1.Namespace{
@@ -448,18 +428,30 @@ func installChartOrDie(ctx context.Context, cs *kubernetes.Clientset, domain, re
 	}
 
 	vars := helmValuesStringFromMap(map[string]string{
-		"domain":               domain,
-		"registry":             registry,
-		"project":              *project,
-		"app_management":       strconv.FormatBool(appManagement),
-		"cr_syncer":            strconv.FormatBool(*crSyncer),
-		"fluentd":              strconv.FormatBool(*fluentd),
-		"docker_data_root":     *dockerDataRoot,
-		"pod_cidr":             *podCIDR,
-		"robot_authentication": strconv.FormatBool(*robotAuthentication),
-		"robot.name":           *robotName,
-		"webhook.tls.crt":      whCert,
-		"webhook.tls.key":      whKey,
+		"domain":                             domain,
+		"registry":                           registry,
+		"docker_data_root":                   *dockerDataRoot,
+		"pod_cidr":                           *podCIDR,
+		"robot.name":                         *robotName,
+		"webhook.tls.crt":                    whCert,
+		"webhook.tls.key":                    whKey,
+		"images.chart_assignment_controller": robotSetupConfig.Data["chart_assignment_controller_image"],
+		"images.cr_syncer":                   robotSetupConfig.Data["cr_syncer_image"],
+		"images.metadata_server":             robotSetupConfig.Data["metadata_server_image"],
+		"tenant":                             robotSetupConfig.Data["tenant"],
+		"tenant_domain":                      robotSetupConfig.Data["tenant_domain"],
+		"tenant_main_namespace":              robotSetupConfig.Data["tenant_main_namespace"],
+		// This is a bit cumbersome, but the whole array needs to bet set in order to replace two values
+		"fluent-bit.extraContainers[0].name":         "logging-proxy",
+		"fluent-bit.extraContainers[0].image":        registry + "/" + robotSetupConfig.Data["logging_proxy_image"],
+		"fluent-bit.extraContainers[0].env[0].name":  "FLUENTD_HOST",
+		"fluent-bit.extraContainers[0].env[0].value": "fluentd." + domain,
+		"fluent-bit.extraContainers[0].env[1].name":  "LISTENING_ADDR",
+		"fluent-bit.extraContainers[0].env[1].value": "127.0.0.1:8080",
+		"fluent-bit.extraContainers[0].env[2].name":  "ENABLE_DEBUG",
+		"fluent-bit.extraContainers[0].env[2].value": "false",
+		"fluent-bit.extraContainers[0].env[3].name":  "TENANT_NAMESPACE",
+		"fluent-bit.extraContainers[0].env[3].value": robotSetupConfig.Data["tenant_main_namespace"],
 	})
 	log.Printf("Installing %s chart using Synk from %s", name, chartPath)
 
@@ -503,18 +495,33 @@ func mergeMaps(base, additions map[string]string) map[string]string {
 	return result
 }
 
-func createOrUpdateRobot(ctx context.Context, k8sDynamicClient dynamic.Interface, labels map[string]string, annotations map[string]string) error {
+func ensureTenantMainNamespace(ctx context.Context, client *kubernetes.Clientset) error {
+	_, err := client.CoreV1().Namespaces().Get(ctx, mainNamespace, metav1.GetOptions{})
+	if apierrors.IsNotFound(err) {
+		var namespace corev1.Namespace
+		namespace.Name = mainNamespace
+		_, err := client.CoreV1().Namespaces().Create(ctx, &namespace, metav1.CreateOptions{})
+		if err != nil {
+			errors.Wrap(err, "create tenant main namespace")
+		}
+	} else if err != nil {
+		errors.Wrap(err, "get tenant main namespace")
+	}
+	return nil
+}
+
+func createOrUpdateRobot(ctx context.Context, k8sDynamicClient dynamic.Interface, labels map[string]string, annotations map[string]string, robotSetupConfig *corev1.ConfigMap) error {
 	labels["cloudrobotics.com/robot-name"] = *robotName
 	host := os.Getenv("HOST_HOSTNAME")
 	if host != "" && labels["cloudrobotics.com/master-host"] == "" {
 		labels["cloudrobotics.com/master-host"] = host
 	}
-	crc_version := os.Getenv("CRC_VERSION")
+	crc_version := robotSetupConfig.Data["setup_robot_crc"]
 	if crc_version != "" {
 		annotations["cloudrobotics.com/crc-version"] = crc_version
 	}
 
-	robotClient := k8sDynamicClient.Resource(robotGVR).Namespace("default")
+	robotClient := k8sDynamicClient.Resource(robotGVR).Namespace(mainNamespace)
 	robot, err := robotClient.Get(ctx, *robotName, metav1.GetOptions{})
 	if err != nil {
 		if s, ok := err.(*apierrors.StatusError); ok && s.ErrStatus.Reason == metav1.StatusReasonNotFound {
@@ -526,14 +533,13 @@ func createOrUpdateRobot(ctx context.Context, k8sDynamicClient dynamic.Interface
 			robot.SetLabels(labels)
 			robot.SetAnnotations(annotations)
 			robot.Object["spec"] = map[string]interface{}{
-				"type":    *robotType,
-				"project": *project,
+				"type": *robotType,
 			}
 			robot.Object["status"] = make(map[string]interface{})
 			_, err := robotClient.Create(ctx, robot, metav1.CreateOptions{})
 			return err
 		} else {
-			return fmt.Errorf("Failed to get robot %v: %v", *robotName, err)
+			return fmt.Errorf("failed to get robot %v: %v", *robotName, err)
 		}
 	}
 
@@ -545,7 +551,6 @@ func createOrUpdateRobot(ctx context.Context, k8sDynamicClient dynamic.Interface
 		return fmt.Errorf("unmarshaling robot failed: spec is not a map")
 	}
 	spec["type"] = *robotType
-	spec["project"] = *project
 	_, err = robotClient.Update(ctx, robot, metav1.UpdateOptions{})
 	return err
 }
@@ -570,4 +575,155 @@ func parseKeyValues(s string) (map[string]string, error) {
 		lset[parts[0]] = parts[1]
 	}
 	return lset, nil
+}
+
+func createServiceAccountSecret(ctx context.Context, client *kubernetes.Clientset) (*corev1.Secret, error) {
+	secretName := fmt.Sprintf("robot-token-%s", *robotName)
+
+	secret := &corev1.Secret{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:        secretName,
+			Namespace:   robotConfigNamespace,
+			Annotations: map[string]string{"kubernetes.io/service-account.name": "robot-service"},
+		},
+		Type: corev1.SecretTypeServiceAccountToken,
+	}
+
+	secret, err := client.CoreV1().Secrets(robotConfigNamespace).Create(ctx, secret, metav1.CreateOptions{})
+	return secret, err
+}
+
+func getServiceAccountSecret(ctx context.Context, client *kubernetes.Clientset) (*corev1.Secret, error) {
+	secretName := fmt.Sprintf("robot-token-%s", *robotName)
+	secret, err := client.CoreV1().Secrets(robotConfigNamespace).Get(ctx, secretName, metav1.GetOptions{})
+	return secret, err
+}
+
+func syncDockerSecret(ctx context.Context, remoteClient, localClient *kubernetes.Clientset) error {
+	secretRemote, err := remoteClient.CoreV1().Secrets(robotConfigNamespace).Get(ctx, coretools.ImagePullSecret, metav1.GetOptions{})
+	if err != nil {
+		return fmt.Errorf("getting docker secret from remote cluster failed: %s", err)
+	}
+
+	nsList, err := localClient.CoreV1().Namespaces().List(ctx, metav1.ListOptions{})
+	if err != nil {
+		return fmt.Errorf("failed to list namespaces in local cluster: %v", err)
+	}
+
+	for _, ns := range nsList.Items {
+
+		secretLocal, err := localClient.CoreV1().Secrets(ns.Name).Get(ctx, coretools.ImagePullSecret, metav1.GetOptions{})
+		if apierrors.IsNotFound(err) {
+			if ns.Name == baseNamespace {
+				newSecret := &corev1.Secret{}
+				newSecret.SetNamespace(ns.Name)
+				newSecret.SetName(secretRemote.GetName())
+				newSecret.Type = secretRemote.Type
+				newSecret.Data = secretRemote.Data
+				log.Printf("Creating docker pull secret in %s namespace", baseNamespace)
+				if _, err := localClient.CoreV1().Secrets(ns.Name).Create(ctx, newSecret, metav1.CreateOptions{}); err != nil {
+					return fmt.Errorf("creating docker secret in local cluster failed: %s", err)
+				}
+				sa := localClient.CoreV1().ServiceAccounts(ns.Name)
+				patchData := []byte(`{"imagePullSecrets": [{"name": "` + coretools.ImagePullSecret + `"}]}`)
+				return backoff.Retry(
+					func() error {
+						_, err := sa.Patch(ctx, baseNamespace, types.StrategicMergePatchType, patchData, metav1.PatchOptions{})
+						if err != nil && !apierrors.IsNotFound(err) {
+							return backoff.Permanent(fmt.Errorf("failed to apply %q: %v", patchData, err))
+						}
+						return err
+					},
+					backoff.NewConstantBackOff(time.Second),
+				)
+			}
+			continue
+
+		} else if err != nil {
+			return fmt.Errorf("getting docker secret from namespace %s of local cluster failed: %s", ns.Name, err)
+		}
+
+		secretLocal.Data = secretRemote.Data
+		secretLocal.Type = secretRemote.Type
+		log.Printf("Updating docker pull secret in namespace %s", ns.Name)
+		if _, err = localClient.CoreV1().Secrets(ns.Name).Update(ctx, secretLocal, metav1.UpdateOptions{}); err != nil {
+			return fmt.Errorf("updating docker secret in namespace %s of local cluster failed: %s", ns.Name, err)
+		}
+	}
+	return nil
+}
+
+func getTokenFromSecret(secret *corev1.Secret) (*string, error) {
+	tokenByte := secret.Data["token"]
+	if len(tokenByte) == 0 {
+		return nil, fmt.Errorf("no token in secret %s", secret.GetName())
+	}
+	token := string(tokenByte)
+	return &token, nil
+}
+
+// Create ServiceAccount secret and wait until the access token was created
+func waitForServiceAccountToken(ctx context.Context, client *kubernetes.Clientset, retries uint64) (*string, error) {
+	log.Print("Wait for Service Account API token creation in Cloud Cluster")
+	_, err := getServiceAccountSecret(ctx, client)
+	if apierrors.IsNotFound(err) {
+		log.Print("Creating new Service Account API token for robot")
+		_, err := createServiceAccountSecret(ctx, client)
+		if err != nil {
+			return nil, err
+		}
+	}
+
+	var token *string
+
+	if err := backoff.RetryNotify(
+		func() error {
+			secret, err := getServiceAccountSecret(ctx, client)
+			if err != nil {
+				return err
+			}
+			token, err = getTokenFromSecret(secret)
+			return err
+		},
+		newExponentialBackoff(time.Second, 2, retries),
+		func(_ error, _ time.Duration) {
+			log.Print("... Retry getting Service Account API token from Cloud Cluster")
+		},
+	); err != nil {
+		return nil, fmt.Errorf("waiting for for Service Account API token creation in Cloud Cluster failed: %v", err)
+	}
+
+	return token, nil
+}
+
+func getRobotSetupConfigmap(ctx context.Context, client *kubernetes.Clientset, retries uint64) (*corev1.ConfigMap, error) {
+
+	var robotSetup *corev1.ConfigMap
+
+	if err := backoff.RetryNotify(
+		func() error {
+			var err error
+			robotSetup, err = client.CoreV1().ConfigMaps(robotConfigNamespace).Get(ctx, coretools.RobotSetupConfigmap, metav1.GetOptions{})
+			return err
+		},
+		newExponentialBackoff(time.Second, 2, retries),
+		func(_ error, _ time.Duration) {
+			log.Printf("... Retry getting %s confimap from Cloud Cluster", coretools.RobotSetupConfigmap)
+		},
+	); err != nil {
+		return nil, fmt.Errorf("waiting for for getting confimap %s from Cloud Cluster failed: %v", coretools.RobotSetupConfigmap, err)
+	}
+
+	if robotSetup.Data["setup_robot_crc"] == "" ||
+		robotSetup.Data["chart_assignment_controller_image"] == "" ||
+		robotSetup.Data["cr_syncer_image"] == "" ||
+		robotSetup.Data["metadata_server_image"] == "" ||
+		robotSetup.Data["logging_proxy_image"] == "" ||
+		robotSetup.Data["tenant"] == "" ||
+		robotSetup.Data["tenant_main_namespace"] == "" {
+
+		return nil, fmt.Errorf("incomplete ConfigMap %s/%s in cloud cluster. Please check configuration", robotConfigNamespace, coretools.RobotSetupConfigmap)
+	}
+
+	return robotSetup, nil
 }
