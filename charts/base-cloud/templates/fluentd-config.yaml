@@ -26,6 +26,7 @@ data:
   03_dispatch.conf: ""
 
   04_outputs.conf: |-
+{{ if or (eq .Values.cloud_logging "true" ) (eq .Values.stackdriver_logging "true")}}
     <match **>
     @type copy
 {{ if eq .Values.cloud_logging "true" }}
@@ -57,3 +58,6 @@ data:
     </store>
 {{ end }}
     </match>
+{{ else }}
+    ""
+{{ end }}

@@ -54,11 +54,12 @@ const (
 // Add adds a controller and validation webhook for the ChartAssignment resource type
 // to the manager and server.
 // Handled ChartAssignments are filtered by the provided cluster.
-func Add(ctx context.Context, mgr manager.Manager, cluster string) error {
+func Add(ctx context.Context, mgr manager.Manager, cluster string, copyPullSecret bool) error {
 	r := &Reconciler{
-		kube:     mgr.GetClient(),
-		recorder: mgr.GetEventRecorderFor("chartassignment-controller"),
-		cluster:  cluster,
+		kube:           mgr.GetClient(),
+		recorder:       mgr.GetEventRecorderFor("chartassignment-controller"),
+		cluster:        cluster,
+		copyPullSecret: copyPullSecret,
 	}
 	var err error
 	r.releases, err = newReleases(mgr.GetConfig(), r.recorder)
@@ -124,10 +125,11 @@ func (r *Reconciler) enqueueForPod(ctx context.Context, m meta.Object, q workque
 // Reconciler provides an idempotent function that brings the cluster into a
 // state consistent with the specification of a ChartAssignment.
 type Reconciler struct {
-	kube     kclient.Client
-	recorder record.EventRecorder
-	cluster  string // Cluster for which to handle ChartAssignments.
-	releases *releases
+	kube           kclient.Client
+	recorder       record.EventRecorder
+	cluster        string // Cluster for which to handle ChartAssignments.
+	copyPullSecret bool
+	releases       *releases
 }
 
 // Reconcile creates and updates a Synk ResourceSet for the given chart
@@ -188,8 +190,10 @@ func (r *Reconciler) ensureNamespace(ctx context.Context, as *apps.ChartAssignme
 // ensureServiceAccount makes sure we have an image pull secret for gcr.io inside the apps namespace
 // and the default service account configured to use it. This is needed to make apps work that
 // reference images from a private container registry.
-// TODO(ensonic): Put this behind a flag to only do this as needed.
 func (r *Reconciler) ensureServiceAccount(ctx context.Context, ns *core.Namespace, as *apps.ChartAssignment) error {
+	if !r.copyPullSecret {
+		return nil
+	}
 	// Copy imagePullSecret from 'default' namespace, since service accounts cannot reference
 	// secrets in other namespaces.
 	var secret core.Secret

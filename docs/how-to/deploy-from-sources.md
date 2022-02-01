@@ -33,11 +33,11 @@ Please use a Linux shell like Ubuntu 20.04 LTS. You will need the following tool
 
    Please answer the configuration questions. Domain and Ingress IP of your cluster should be determined automatically and provided as default values.
 
-   By default the images are pulled and pushed to the docker registry set in `.REGISTRY` file in the root directory of this repository on your computer. This file is not synchronized to github. 
+   If you keep the default registry `ghcr.io/sap/cloud-robotics` in your configuration you could skip step 4. We built the images and pushed them for you into our github docker registry.
 
-   When you save the configuration and there is no `.REGISTRY` file on your computer, it will be created automatically using the registry you entered in the wizzard.
+   When you save the configuration and there is no `.REGISTRY` file on your computer, it will be created automatically using the registry you entered in the wizzard. The script will not overwrite existing values. The file is used when you build your own images in step 4.
 
-    Command summary:
+   Command summary:
 
     ```shell
     make kubeconfig=<path of kubeconfig file of your cluster> set-deployment-config
@@ -47,7 +47,7 @@ Please use a Linux shell like Ubuntu 20.04 LTS. You will need the following tool
 
    Docker containers for core services are built in docker containers.
 
-   If you have set a docker registry where the images are already existing in the previous step, you could skip this step.
+   For convenience you can save the docker registry you want to use in `.REGISTRY` file in the root directory of this repository on your computer. The registry from this file is used by default for building and pushing your images. This file is not synchronized to github. 
 
    You can start building your docker images using `make docker-images`
 

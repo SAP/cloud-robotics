@@ -18,9 +18,6 @@
 
 set -e
 
-# Name of Kubernetes image pull secret
-image_pull_secret="cloud-robotics-images"
-
 # Directory of this script
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
@@ -149,10 +146,8 @@ function get_default_vars {
     ask_docker_yn=y
     default_gateway="kyma-system/kyma-gateway"
     deploy_environment="GCP"
-    docker_registry=""
-    if cat ${dir}/../.REGISTRY &>/dev/null; then
-      docker_registry=$(cat ${dir}/../.REGISTRY)
-    fi
+    docker_registry=$default_docker_registry
+    public_registry="true"
   fi
 
   if [[ "${cloud_logging}" == "true" ]]; then
@@ -228,19 +223,23 @@ function read_configuration {
     k8s_service_catalog=false
   fi
 
-  read_variable docker_registry "Please enter the docker registry url for this cluster" $docker_registry
+  read_variable docker_registry "Please enter the docker registry url for this cluster - ghcr.io/sap/cloud-robotics is our public registry" $docker_registry
 
-  if ask_yn "Would you like to provide a new docker user?" "${ask_docker_yn}"; then
-    ask_docker_yn=y
+  if [[ "$docker_registry" != "$default_docker_registry" ]]; then
+    if ask_yn "Would you like to provide a new docker user?" "${ask_docker_yn}"; then
+      ask_docker_yn=y
+    fi
+
+    if [[ "$ask_docker_yn" == "y" ]]; then
+      read_variable docker_user "Please enter the user for the docker registry" $docker_user
+
+      read_variable docker_password "Please enter the password for the docker registry" $docker_password
+
+      read_variable docker_email "Please enter the email address of the docker user" $docker_email
+
+      public_registry="false"
+    fi
   fi
-
-  if [[ "$ask_docker_yn" == "y" ]]; then
-    read_variable docker_user "Please enter the user for the docker registry" $docker_user
-
-    read_variable docker_password "Please enter the password for the docker registry" $docker_password
-
-    read_variable docker_email "Please enter the email address of the docker user" $docker_email
-  fi 
 
   echo
   echo "#######################################"
@@ -255,6 +254,7 @@ function read_configuration {
   print_variable "Use Stackdriver Logging" $stackdriver_logging
   print_variable "Use K8S service catalog" $k8s_service_catalog
   print_variable "Docker registry" $docker_registry
+  print_variable "Is Docker registry public" $public_registry
   if [ "${docker_user}" != "<tbd>" ]; then 
     print_variable "Docker user" $docker_user
     print_variable "Docker password" "***"
@@ -268,6 +268,7 @@ function save_configuration {
     --set-string ingress_ip=${ingress_ip}
     --set-string deploy_environment=${deploy_environment}
     --set-string registry=${docker_registry}
+    --set-string public_registry=${public_registry}
     --set-string cloud_logging=${cloud_logging}
     --set-string stackdriver_logging=${stackdriver_logging}
     --set-string default_gateway=${default_gateway}

@@ -1,7 +1,8 @@
 domain: "...ondemand.com"
 ingress_ip: ""
 deploy_environment: "choose one of those GCP/Azure/AWS depending on kyma.cluster"
-registry: "registry.sap.com/my-project"
+registry: "ghcr.io/sap/cloud-robotics"
+public_registry: "true"
 
 k8s_service_catalog: "false"
 

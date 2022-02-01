@@ -4,6 +4,7 @@ metadata:
   name: robot-setup
 data:
   registry: "{{ .Values.registry }}"
+  public_registry: "{{ .Values.public_registry }}"
   domain: "{{ .Values.domain }}"
   setup_robot_crc: "{{ .Values.setup_robot_crc }}"
   setup_robot_image: "{{ .Values.images.setup_robot_image }}"

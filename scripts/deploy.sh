@@ -22,8 +22,6 @@ set -e
 core_namespace="default"
 robot_config_namespace="robot-config"
 
-pull_secret="cloud-robotics-images"
-
 # Directory of this script
 dir="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
 
@@ -38,14 +36,23 @@ function construct_image_string {
 }
 
 function get_core_container_digests {
-  local version=$(cat ${dir}/../VERSION)
-  local sha
-  if [[ -d $dir/../.git ]]; then
-    sha=$(git rev-parse --short HEAD)
+  local effective_version
+  if [[ "$registry" == "$default_docker_registry" ]] ; then
+    effective_version="latest"
+    crc_version="crc-bin/crc-bin+latest"
   else
-    die "no git dir SHA is unknown"
+    local version
+    version=$(cat ${dir}/../VERSION)
+    local sha
+    if [[ -d $dir/../.git ]]; then
+      sha=$(git rev-parse --short HEAD)
+    else
+      die "no git dir SHA is unknown"
+    fi
+    effective_version=${version}-${sha}
+
+    crc_version="crc-${version}/crc-${version}+${sha}"
   fi
-  local effective_version=${version}-${sha}
   echo "Using version '"${effective_version}"' of core images"
   local image
   # app-auth-proxy
@@ -88,15 +95,6 @@ function get_core_container_digests {
   image=$(construct_image_string ${registry} tenant-controller ${effective_version})
   echo "Getting digest for '${image}'"
   tenant_controller_digest=$(get_container_digest ${image})
-
-  local sha
-  if [[ -d $dir/../.git ]]; then
-    sha=$(git rev-parse --short HEAD)
-  else
-    echo "WARNING: no git dir SHA is unknown"
-    sha="unknown"
-  fi
-  crc_version="crc-${version}/crc-${version}+${sha}"
 }
 
 function get_container_digest {
@@ -176,6 +174,7 @@ function helm_charts {
     --set-string ingress_ip=${ingress_ip}
     --set-string deploy_environment=${deploy_environment}
     --set-string registry=${registry}
+    --set-string public_registry=${public_registry}
     --set-string certificate_authority.key=${ca_key}
     --set-string certificate_authority.crt=${ca_crt}
     --set-string setup_robot_crc=${crc_version}

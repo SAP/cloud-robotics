@@ -24,6 +24,7 @@ spec:
           domain={{ .Values.domain }},\
           ingress_ip={{ .Values.ingress_ip }},\
           registry={{ .Values.registry }},\
+          public_registry={{ .Values.public_registry }},\
           deploy_environment={{ .Values.deploy_environment }},\
           k8s_service_catalog={{ .Values.k8s_service_catalog }},\
           certificate_authority.crt={{ .Values.certificate_authority.crt }},\
@@ -123,6 +124,7 @@ spec:
         image: "{{ .Values.registry }}/{{ .Values.images.chart_assignment_controller }}"
         args:
         - "--cloud-cluster=true"
+        - "--omit-copying-pullsecret={{ .Values.public_registry }}"
         - "--webhook-enabled=true"
         - "--webhook-port=9876"
         - "--cert-dir=/tls"

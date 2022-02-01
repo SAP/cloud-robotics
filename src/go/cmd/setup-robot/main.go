@@ -231,6 +231,10 @@ func main() {
 	if registry == "" {
 		log.Fatal("REGISTRY environment variable is required.")
 	}
+	publicRegistry := os.Getenv("PUBLIC_REGISTRY")
+	if publicRegistry == "" {
+		log.Fatal("PUBLIC_REGISTRY environment variable is required.")
+	}
 	parsedLabels, err := parseKeyValues(*labels)
 	if err != nil {
 		log.Fatalf("Invalid labels %q: %s", *labels, err)
@@ -318,8 +322,11 @@ func main() {
 	if err := storeInK8sSecret(ctx, k8sLocalClientSet, baseNamespace, auth); err != nil {
 		log.Fatal(fmt.Errorf("failed to write auth secret: %v", err))
 	}
-	if err := syncDockerSecret(ctx, k8sClientSet, k8sLocalClientSet); err != nil {
-		log.Fatal(err)
+
+	if strings.ToLower(publicRegistry) != "true" {
+		if err := syncDockerSecret(ctx, k8sClientSet, k8sLocalClientSet); err != nil {
+			log.Fatal(err)
+		}
 	}
 
 	// ensure tls certs
@@ -335,7 +342,7 @@ func main() {
 	}
 
 	// Use "robot" as a suffix for consistency for Synk deployments.
-	installChartOrDie(ctx, k8sLocalClientSet, *domain, registry, "base-robot", baseNamespace,
+	installChartOrDie(ctx, k8sLocalClientSet, *domain, registry, publicRegistry, "base-robot", baseNamespace,
 		"base-robot-0.1.0.tgz", whCert, whKey, robotSetupConfig)
 	log.Println("Setup complete")
 }
@@ -415,7 +422,7 @@ func helmValuesStringFromMap(varMap map[string]string) string {
 }
 
 // installChartOrDie installs a chart using Synk.
-func installChartOrDie(ctx context.Context, cs *kubernetes.Clientset, domain, registry, name, namespace, chartPath, whCert, whKey string, robotSetupConfig *corev1.ConfigMap) {
+func installChartOrDie(ctx context.Context, cs *kubernetes.Clientset, domain, registry, publicRegistry, name, namespace, chartPath, whCert, whKey string, robotSetupConfig *corev1.ConfigMap) {
 	// ensure namespace for chart exists
 	if _, err := cs.CoreV1().Namespaces().Create(ctx,
 		&corev1.Namespace{
@@ -430,6 +437,7 @@ func installChartOrDie(ctx context.Context, cs *kubernetes.Clientset, domain, re
 	vars := helmValuesStringFromMap(map[string]string{
 		"domain":                             domain,
 		"registry":                           registry,
+		"public_registry":                    publicRegistry,
 		"docker_data_root":                   *dockerDataRoot,
 		"pod_cidr":                           *podCIDR,
 		"robot.name":                         *robotName,

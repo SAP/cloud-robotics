@@ -41,6 +41,9 @@ var (
 	cloudCluster = flag.Bool("cloud-cluster", true,
 		"Is the controller deployed in cloud cluster")
 
+	omitCopyingPullsecret = flag.Bool("omit-copying-pullsecret", true,
+		"Shall coyping a docker pull secret be omitted")
+
 	webhookEnabled = flag.Bool("webhook-enabled", true,
 		"Whether the webhook should be served")
 
@@ -59,7 +62,7 @@ func main() {
 	ctx := context.Background()
 
 	var clusterName string
-	if *cloudCluster == true {
+	if *cloudCluster {
 		clusterName = "cloud"
 		log.Print("Starting chart-assigment-controller in cloud setup")
 	} else {
@@ -105,7 +108,7 @@ func setupAppV2(ctx context.Context, cfg *rest.Config, cluster string) error {
 	if err != nil {
 		return errors.Wrap(err, "create controller manager")
 	}
-	if err := chartassignment.Add(ctx, mgr, cluster); err != nil {
+	if err := chartassignment.Add(ctx, mgr, cluster, !*omitCopyingPullsecret); err != nil {
 		return errors.Wrap(err, "add ChartAssignment controller")
 	}
 

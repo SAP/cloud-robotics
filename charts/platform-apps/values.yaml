@@ -1,3 +1,3 @@
 domain: "...ondemand.com"
 deploy_environment: "choose one of those GCP/Azure/AWS depending on kyma.cluster"
-registry: "registry.sap.com/my-project"
+registry: "ghcr.io/sap/cloud-robotics"

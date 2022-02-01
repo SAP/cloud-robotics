@@ -19,6 +19,12 @@
 # Name of config map used to store cluster config. Must be the same used in /charts/setup-cloud/templates/cloud-robotics-core-config.yaml
 core_config_map="cloud-robotics-core-config"
 
+# Public cloud robotics docker registry
+default_docker_registry="ghcr.io/sap/cloud-robotics"
+
+# Name of Kubernetes image pull secret
+image_pull_secret="cloud-robotics-images"
+
 function die {
   echo
   echo "$1" >&2
@@ -74,6 +80,7 @@ function get_cluster_config {
   domain=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "domain"}}')
   ingress_ip=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "ingress_ip"}}')
   registry=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "registry"}}')
+  public_registry=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "public_registry"}}')
   cloud_logging=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "cloud_logging"}}')
   stackdriver_logging=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "stackdriver_logging"}}')
   default_gateway=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "default_gateway"}}')

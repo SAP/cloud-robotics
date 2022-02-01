@@ -1,4 +1,5 @@
-registry: "registry.sap.com/my-project"
+registry: "ghcr.io/sap/cloud-robotics"
+public_registry: "true"
 domain: "example.com"
 setup_robot_crc: "0.1.0_xyz"
 default_gateway: kyma-system/kyma-gateway

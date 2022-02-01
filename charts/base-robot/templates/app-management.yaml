@@ -17,6 +17,7 @@ spec:
         image: "{{ .Values.registry }}/{{ .Values.images.chart_assignment_controller }}"
         args:
         - "--cloud-cluster=false"
+        - "--omit-copying-pullsecret={{ .Values.public_registry }}"
         - "--webhook-enabled={{ .Values.webhook.enabled }}"
         - "--webhook-port=9876"
         - "--cert-dir=/tls"

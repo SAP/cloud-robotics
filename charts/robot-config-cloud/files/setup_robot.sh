@@ -112,13 +112,25 @@ if [[ -z "$REGISTRY" ]] ; then
   exit 1
 fi
 
-echo "Getting image pull secret from remote cluster"
-DOCKER_CONFIG_JSON=$(curl -fsSL -H "Authorization: Bearer ${ACCESS_TOKEN}" \
-"https://k8s.${DOMAIN}/api/v1/namespaces/${ROBOT_CONFIG_NS}/secrets/cloud-robotics-images" | \
-python3 -c "import sys, json; print(json.load(sys.stdin)['data'])")
+# Check if cloud robotics registry is public
+PUBLIC_REGISTRY=$(curl -fsSL -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+"https://k8s.${DOMAIN}/api/v1/namespaces/${ROBOT_CONFIG_NS}/configmaps/robot-setup" | \
+python3 -c "import sys, json; print(json.load(sys.stdin)['data']['public_registry'])") || \
+  PUBLIC_REGISTRY=""
 
-echo "Applying image pull secret to local cluster"
-cat <<EOF | kc apply -f -
+if [[ -z "$PUBLIC_REGISTRY" ]] ; then
+  echo "ERROR: failed to get container registry type from cloud cluster" >&2
+  exit 1
+fi
+
+if [[ "$PUBLIC_REGISTRY" != "true" ]] ; then
+  echo "Getting image pull secret from remote cluster"
+  DOCKER_CONFIG_JSON=$(curl -fsSL -H "Authorization: Bearer ${ACCESS_TOKEN}" \
+  "https://k8s.${DOMAIN}/api/v1/namespaces/${ROBOT_CONFIG_NS}/secrets/cloud-robotics-images" | \
+  python3 -c "import sys, json; print(json.load(sys.stdin)['data'])")
+
+  echo "Applying image pull secret to local cluster"
+  cat <<EOF | kc apply -f -
 apiVersion: v1
 kind: Secret
 metadata:
@@ -127,6 +139,7 @@ type: kubernetes.io/dockerconfigjson
 data:
   ${DOCKER_CONFIG_JSON}
 EOF
+fi
 
 # Wait for creation of the default service account.
 # https://github.com/kubernetes/kubernetes/issues/66689
@@ -147,15 +160,24 @@ echo "Running setup-robot"
 
 # Remove previous instance, in case installation was canceled
 kc delete pod setup-robot 2> /dev/null || true
-faketty kubectl --context "${KUBE_CONTEXT}" run setup-robot --restart=Never -it --rm \
-  --image="${REGISTRY}/${IMAGE_REFERENCE}" \
-  --overrides='{ "spec": { "imagePullSecrets": [{"name": "setup-robot-docker"}] } }' \
-  --env="ACCESS_TOKEN=${ACCESS_TOKEN}" \
-  --env="REGISTRY=${REGISTRY}" \
-  --env="HOST_HOSTNAME=${HOST_HOSTNAME}" \
-  -- "$@"
+if [[ "$PUBLIC_REGISTRY" != "true" ]] ; then
+  faketty kubectl --context "${KUBE_CONTEXT}" run setup-robot --restart=Never -it --rm \
+    --image="${REGISTRY}/${IMAGE_REFERENCE}" \
+    --overrides='{ "spec": { "imagePullSecrets": [{"name": "setup-robot-docker"}] } }' \
+    --env="ACCESS_TOKEN=${ACCESS_TOKEN}" \
+    --env="REGISTRY=${REGISTRY}" \
+    --env="PUBLIC_REGISTRY=${PUBLIC_REGISTRY}" \
+    --env="HOST_HOSTNAME=${HOST_HOSTNAME}" \
+    -- "$@"
 
-
-echo "Deleting image pull secret from local cluster"
-
-kc delete secrets setup-robot-docker
+  echo "Deleting image pull secret from local cluster"
+  kc delete secrets setup-robot-docker
+else
+  faketty kubectl --context "${KUBE_CONTEXT}" run setup-robot --restart=Never -it --rm \
+    --image="${REGISTRY}/${IMAGE_REFERENCE}" \
+    --env="ACCESS_TOKEN=${ACCESS_TOKEN}" \
+    --env="REGISTRY=${REGISTRY}" \
+    --env="PUBLIC_REGISTRY=${PUBLIC_REGISTRY}" \
+    --env="HOST_HOSTNAME=${HOST_HOSTNAME}" \
+    -- "$@"
+fi

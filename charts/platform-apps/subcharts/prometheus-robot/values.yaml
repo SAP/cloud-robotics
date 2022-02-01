@@ -1,5 +1,5 @@
 domain: "...ondemand.com"
-registry: "registry.sap.com/my-project"
+registry: "ghcr.io/sap/cloud-robotics"
 robot:
   name: ""
 

@@ -70,7 +70,7 @@ RUN mkdir /charts && /helm_bin/linux-amd64/helm init --client-only --stable-repo
 # Executable container bases
 # --------------------------
 
-FROM alpine:3.14.2 AS ssl_runner
+FROM alpine:3.15 AS ssl_runner
 # Install SSL ca certificates
 RUN apk add --no-cache ca-certificates
 # Create user to be used in executable containers
@@ -79,7 +79,7 @@ RUN addgroup -g 65532 -S nonroot && adduser -u 65532 -S nonroot -G nonroot
 # Set the uid as an integer for compatibility with runAsNonRoot in Kubernetes
 USER 65532
 
-FROM alpine:3.14.2 AS ssl_iptables_root_runner
+FROM alpine:3.15 AS ssl_iptables_root_runner
 # Install SSL ca certificates
 RUN apk add --no-cache ca-certificates iptables
 
@@ -88,17 +88,26 @@ RUN apk add --no-cache ca-certificates iptables
 # -----------------
 
 FROM ssl_runner AS app-auth-proxy
+ARG EFFECTIVE_VERSION
+LABEL app=app-auth-proxy
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 COPY --from=builder /build/app-auth-proxy /app-auth-proxy
 EXPOSE 8000
 ENTRYPOINT [ "./app-auth-proxy" ]
 
 FROM ssl_runner AS app-rollout-controller
+ARG EFFECTIVE_VERSION
+LABEL app=app-rollout-controller
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 COPY --from=builder /build/app-rollout-controller /app-rollout-controller
 ENTRYPOINT [ "./app-rollout-controller" ]
 
 FROM ssl_runner AS chart-assignment-controller
+ARG EFFECTIVE_VERSION
+LABEL app=chart-assignment-controller
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 # Helm used by init container
 COPY --from=builder /helm_bin/linux-amd64/helm /helm
@@ -106,36 +115,57 @@ COPY --from=builder /build/chart-assignment-controller /chart-assignment-control
 ENTRYPOINT [ "./chart-assignment-controller" ]
 
 FROM ssl_runner AS cr-syncer
+ARG EFFECTIVE_VERSION
+LABEL app=cr-syncer
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 COPY --from=builder /build/cr-syncer /cr-syncer
 ENTRYPOINT [ "./cr-syncer" ]
 
 FROM ssl_runner AS crd-generator
+ARG EFFECTIVE_VERSION
+LABEL app=crd-generator
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 COPY --from=builder /build/crd-generator /crd-generator
 ENTRYPOINT [ "./crd-generator" ]
 
 FROM ssl_runner AS http-relay-client
+ARG EFFECTIVE_VERSION
+LABEL app=http-relay-client
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 COPY --from=builder /build/http-relay-client /http-relay-client
 ENTRYPOINT [ "./http-relay-client" ]
 
 FROM ssl_runner AS http-relay-server
+ARG EFFECTIVE_VERSION
+LABEL app=http-relay-server
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 COPY --from=builder /build/http-relay-server /http-relay-server
 ENTRYPOINT [ "./http-relay-server" ]
 
 FROM ssl_runner AS logging-proxy
+ARG EFFECTIVE_VERSION
+LABEL app=logging-proxy
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 COPY --from=builder /build/logging-proxy /logging-proxy
 ENTRYPOINT [ "./logging-proxy" ]
 
 FROM ssl_iptables_root_runner AS metadata-server
+ARG EFFECTIVE_VERSION
+LABEL app=metadata-server
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 COPY --from=builder /build/metadata-server /metadata-server
 ENTRYPOINT [ "./metadata-server" ]
 
 FROM ssl_runner AS setup-robot
+ARG EFFECTIVE_VERSION
+LABEL app=setup-robot
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 # Helm used for templating charts
 COPY --from=builder /helm_bin/linux-amd64/helm /setup-robot-files/helm
@@ -145,11 +175,17 @@ COPY --from=builder /charts/*.tgz /setup-robot-files/
 ENTRYPOINT [ "./setup-robot" ]
 
 FROM ssl_runner AS synk
+ARG EFFECTIVE_VERSION
+LABEL app=synk
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 COPY --from=builder /build/synk /synk
 ENTRYPOINT [ "./synk" ]
 
 FROM ssl_runner AS tenant-controller
+ARG EFFECTIVE_VERSION
+LABEL app=tenant-controller
+LABEL version=${EFFECTIVE_VERSION}
 WORKDIR /
 COPY --from=builder /build/tenant-controller /tenant-controller
 ENTRYPOINT [ "./tenant-controller" ]
