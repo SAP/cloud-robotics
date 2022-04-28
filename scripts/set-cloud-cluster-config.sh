@@ -239,6 +239,8 @@ function read_configuration {
 
       public_registry="false"
     fi
+  else
+    public_registry="true"
   fi
 
   echo
