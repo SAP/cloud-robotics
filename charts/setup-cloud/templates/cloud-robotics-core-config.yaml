@@ -12,4 +12,4 @@ data:
     stackdriver_logging: "{{ .Values.stackdriver_logging }}"
     default_gateway: "{{ .Values.default_gateway }}"
     k8s_gateway_tls: "{{ .Values.k8s_gateway_tls }}"
-    k8s_service_catalog: "{{ .Values.k8s_service_catalog }}"
+    sap_btp_service_operator: "{{ .Values.sap_btp_service_operator }}"

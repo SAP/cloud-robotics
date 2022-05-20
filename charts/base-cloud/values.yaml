@@ -4,7 +4,7 @@ deploy_environment: "choose one of those GCP/Azure/AWS depending on kyma.cluster
 registry: "ghcr.io/sap/cloud-robotics"
 public_registry: "true"
 
-k8s_service_catalog: "false"
+sap_btp_service_operator: "false"
 
 default_gateway: kyma-system/kyma-gateway
 tenant_specific_gateways: "false"

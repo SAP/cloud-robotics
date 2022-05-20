@@ -19,7 +19,7 @@ spec:
         port:
           number: 80
         host: prometheus-relay-server
-{{ if eq .Values.k8s_service_catalog "true" }}
+{{ if eq .Values.sap_btp_service_operator "true" }}
   - name: prometheus
     match:
     - uri:

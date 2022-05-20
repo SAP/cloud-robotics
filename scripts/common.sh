@@ -85,7 +85,7 @@ function get_cluster_config {
   stackdriver_logging=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "stackdriver_logging"}}')
   default_gateway=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "default_gateway"}}')
   k8s_gateway_tls=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "k8s_gateway_tls"}}')
-  k8s_service_catalog=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "k8s_service_catalog"}}')
+  sap_btp_service_operator=$(kc get configmap -n $ns $core_config_map -o=go-template --template='{{index .data "sap_btp_service_operator"}}')
   echo "Cluster config received"
 
   if ! kc get secret -n $ns cluster-authority &>/dev/null; then

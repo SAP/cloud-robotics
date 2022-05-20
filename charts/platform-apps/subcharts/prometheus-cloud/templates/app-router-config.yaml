@@ -1,4 +1,4 @@
-{{ if eq .Values.k8s_service_catalog "true" }}
+{{ if eq .Values.sap_btp_service_operator "true" }}
 apiVersion: v1
 kind: ConfigMap
 metadata:

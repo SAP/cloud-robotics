@@ -166,10 +166,10 @@ function get_default_vars {
   stackdriver_sa="<tbd>"
   
 
-  if [[ "${k8s_service_catalog}" == "true" ]]; then
-    k8s_service_catalog_yn=y
+  if [[ "${sap_btp_service_operator}" == "true" ]]; then
+    sap_btp_service_operator_yn=y
   else
-    k8s_service_catalog_yn=n
+    sap_btp_service_operator_yn=n
   fi
 
   docker_user="<tbd>"
@@ -217,10 +217,10 @@ function read_configuration {
   fi 
   
 
-  if ask_yn "Should K8S service catalog should be enabled? (for user authentication with SAP BTP Services)" "${k8s_service_catalog_yn}"; then
-    k8s_service_catalog=true
+  if ask_yn "Should SAP BTP service operator should be enabled? (for user authentication with SAP BTP Services)" "${sap_btp_service_operator_yn}"; then
+    sap_btp_service_operator=true
   else
-    k8s_service_catalog=false
+    sap_btp_service_operator=false
   fi
 
   read_variable docker_registry "Please enter the docker registry url for this cluster - ghcr.io/sap/cloud-robotics is our public registry" $docker_registry
@@ -254,7 +254,7 @@ function read_configuration {
   print_variable "Deploy environment" $deploy_environment
   print_variable "Use SAP Cloud Logging" $cloud_logging
   print_variable "Use Stackdriver Logging" $stackdriver_logging
-  print_variable "Use K8S service catalog" $k8s_service_catalog
+  print_variable "Use SAP BTP service operator" $sap_btp_service_operator
   print_variable "Docker registry" $docker_registry
   print_variable "Is Docker registry public" $public_registry
   if [ "${docker_user}" != "<tbd>" ]; then 
@@ -275,7 +275,7 @@ function save_configuration {
     --set-string stackdriver_logging=${stackdriver_logging}
     --set-string default_gateway=${default_gateway}
     --set-string k8s_gateway_tls=${k8s_gateway_tls}
-    --set-string k8s_service_catalog=${k8s_service_catalog}
+    --set-string sap_btp_service_operator=${sap_btp_service_operator}
 EOF
 )
 

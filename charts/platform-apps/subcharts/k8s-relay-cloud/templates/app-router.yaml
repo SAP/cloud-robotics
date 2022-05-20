@@ -1,13 +1,11 @@
-{{ if eq .Values.k8s_service_catalog "true" }}
-apiVersion: servicecatalog.k8s.io/v1beta1
+{{ if eq .Values.sap_btp_service_operator "true" }}
+apiVersion: services.cloud.sap.com/v1alpha1
 kind: ServiceInstance
 metadata:
   name: xsuaa-kubernetes-relay
 spec:
-  clusterServiceClassExternalName: xsuaa
-  clusterServiceClassRef:
-    name: xsuaa
-  clusterServicePlanExternalName: application
+  serviceOfferingName: xsuaa
+  servicePlanName: application
   parameters:
     oauth2-configuration:
       redirect-uris:
@@ -27,15 +25,15 @@ spec:
       name: $XSAPPNAME.Edit
     xsappname: kubernetes-relay-{{ .Values.tenant }}
 ---
-apiVersion: servicecatalog.k8s.io/v1beta1
+apiVersion: services.cloud.sap.com/v1alpha1
 kind: ServiceBinding
 metadata:
   name: xsuaa-app-auth-proxy-bind
   labels:
     app: app-auth-proxy
 spec:
-  instanceRef:
-    name: kubernetes-relay-{{ .Values.tenant }}
+  secretName: xsuaa-app-auth-proxy-bind
+  serviceInstanceName: kubernetes-relay-{{ .Values.tenant }}
 ---
 apiVersion: servicecatalog.kyma-project.io/v1alpha1
 kind: ServiceBindingUsage

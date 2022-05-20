@@ -7,4 +7,4 @@ cloud_logging: "false"
 stackdriver_logging: "false"
 default_gateway: kyma-system/kyma-gateway
 k8s_gateway_tls: kyma-gateway-certs
-k8s_service_catalog: "false"
+sap_btp_service_operator: "false"

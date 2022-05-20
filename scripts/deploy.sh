@@ -113,22 +113,17 @@ function helm_charts {
   if [[ "${cloud_logging}" == "true" ]]; then
     i=0
     until kc get secrets -n $core_namespace cloud-logging-core &>/dev/null; do
-      instance_state=$(kc get serviceinstance.servicecatalog.k8s.io -n $core_namespace cloud-logging-core -o=go-template --template='{{.status.lastConditionState}}')
-      if [[ "${instance_state}" == "Provisioning" ]]; then
+      instance_state=$(kc get serviceinstance.services.cloud.sap.com -n $core_namespace cloud-logging-core -o=go-template --template='{{.status.ready}}')
+      if [[ "${instance_state}" == "False" ]]; then
         if [[ $(($i % 12)) == 0 ]]; then
           echo "Waiting for provisioning of SAP Cloud Logging. This may take while...(It is safe to cancel and try again later too)"
         fi
         i=$((i + 1))
-      elif [[ "${instance_state}" == "ProvisionCallFailed" ]]; then
-        echo "Error during provisioning of SAP Cloud Logging."
-        kc get serviceinstance.servicecatalog.k8s.io -n $core_namespace cloud-logging-core -o yaml
-        kc get servicebinding.servicecatalog.k8s.io -n $core_namespace cloud-logging-core -o yaml
-        die "Provisioning of SAP Cloud Logging failed. If you cannot fix it, please deactivate SAP Cloud Logging in configuration to continue."
-      elif [[ "${instance_state}" == "Ready" ]]; then
+      elif [[ "${instance_state}" == "True" ]]; then
         echo "Provisioning of SAP Cloud Logging completed. The process should continue soon."
       else
-        kc get serviceinstance.servicecatalog.k8s.io -n $core_namespace cloud-logging-core -o yaml
-        kc get servicebinding.servicecatalog.k8s.io -n $core_namespace cloud-logging-core -o yaml
+        kc get serviceinstance.services.cloud.sap.com -n $core_namespace cloud-logging-core -o yaml
+        kc get servicebinding.services.cloud.sap.com -n $core_namespace cloud-logging-core -o yaml
         die "Unexpected state during provisioning of SAP Cloud Logging"        
       fi
       sleep 5
@@ -154,14 +149,14 @@ function helm_charts {
     tenant_specific_gateways="false"
   fi
 
-  if [[ "$k8s_service_catalog" == "true" ]]; then
-    # Test if K8S service catalog is available in the cluster
-    if kc get crds servicebindingusages.servicecatalog.kyma-project.io &>/dev/null && kc get crds serviceinstances.servicecatalog.k8s.io &>/dev/null; then
-      echo "Enabling K8S service catalog"
-      k8s_service_catalog="true"
+  if [[ "$sap_btp_service_operator" == "true" ]]; then
+    # Test if SAP BTP service operator is available in the cluster
+    if kc get crds servicebindingusages.servicecatalog.kyma-project.io &>/dev/null && kc get crds serviceinstances.services.cloud.sap.com &>/dev/null; then
+      echo "Enabling SAP BTP service operator"
+      sap_btp_service_operator="true"
     else
-      echo "K8S service catalog CRDs not found - continuing with disabled catalog"
-      k8s_service_catalog="false"
+      echo "SAP BTP service operator catalog CRDs not found - continuing with disabled catalog"
+      sap_btp_service_operator="false"
     fi
   fi
 
@@ -181,7 +176,7 @@ function helm_charts {
     --set-string default_gateway=${default_gateway}
     --set-string k8s_gateway_tls=${k8s_gateway_tls}
     --set-string tenant_specific_gateways=${tenant_specific_gateways}
-    --set-string k8s_service_catalog=${k8s_service_catalog}
+    --set-string sap_btp_service_operator=${sap_btp_service_operator}
     --set-string cloud_logging=${cloud_logging}
     --set-string stackdriver_logging=${stackdriver_logging}
     --set-string cloudLoggingFluentdEndpoint=${cloudLoggingFluentdEndpoint}

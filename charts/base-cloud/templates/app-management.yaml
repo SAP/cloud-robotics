@@ -26,7 +26,7 @@ spec:
           registry={{ .Values.registry }},\
           public_registry={{ .Values.public_registry }},\
           deploy_environment={{ .Values.deploy_environment }},\
-          k8s_service_catalog={{ .Values.k8s_service_catalog }},\
+          sap_btp_service_operator={{ .Values.sap_btp_service_operator }},\
           use_istio=true,\
           certificate_authority.crt={{ .Values.certificate_authority.crt }},\
           images.http_relay_client={{ .Values.images.http_relay_client }},\

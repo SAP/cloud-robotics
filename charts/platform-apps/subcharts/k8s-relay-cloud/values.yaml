@@ -1,7 +1,7 @@
 domain: "...ondemand.com"
 deploy_environment: "choose one of those GCP/Azure/AWS depending on kyma.cluster"
 registry: "ghcr.io/sap/cloud-robotics"
-k8s_service_catalog: "false"
+sap_btp_service_operator: "false"
 tenant_gateway: kyma-system/kyma-gateway
 
 images:
