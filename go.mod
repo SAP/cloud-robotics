@@ -13,7 +13,7 @@ require (
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/golang/mock v1.5.0
 	github.com/golang/protobuf v1.5.2
-	github.com/gorilla/mux v1.8.0
+	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/sessions v1.2.1
 	github.com/jhump/protoreflect v1.9.0
 	github.com/mitchellh/go-server-timing v1.0.2-0.20201108055052-feb680ab92c2
