@@ -12,7 +12,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM golang:1.17 AS proto_base
+FROM golang:1.22 AS proto_base
 LABEL stage=intermediate
 WORKDIR /
 # Install protoc compiler
@@ -36,7 +36,7 @@ RUN bash ./crd-generate.sh
 
 
 # Installs helm by unpacking .tar.gz provided in /third_party of this project.
-FROM golang:1.17 AS helm_base
+FROM golang:1.22 AS helm_base
 LABEL stage=intermediate
 # Copy entire repository to image
 COPY . /code
