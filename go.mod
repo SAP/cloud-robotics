@@ -51,7 +51,7 @@ require (
 require (
 	github.com/gardener/cert-management v0.8.5
 	github.com/gardener/external-dns-management v0.11.2
-	github.com/stretchr/testify v1.7.0
+	github.com/stretchr/testify v1.8.4
 	istio.io/api v0.0.0-20211124143550-67f86871f2a5
 	istio.io/client-go v1.12.0
 )
@@ -137,7 +137,7 @@ require (
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/square/go-jose.v2 v2.5.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	gopkg.in/yaml.v3 v3.0.0-20210107192922-496545a6307b // indirect
+	gopkg.in/yaml.v3 v3.0.1 // indirect
 	istio.io/gogo-genproto v0.0.0-20210113155706-4daf5697332f // indirect
 	k8s.io/component-base v0.22.2 // indirect
 	k8s.io/klog/v2 v2.9.0 // indirect
