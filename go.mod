@@ -34,7 +34,7 @@ require (
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
 	golang.org/x/sys v0.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20210624174822-c5cf32407d0a // indirect
-	google.golang.org/protobuf v1.26.0
+	google.golang.org/protobuf v1.32.0
 	gopkg.in/h2non/gock.v1 v1.0.15
 	k8s.io/api v0.22.2
 	k8s.io/apiextensions-apiserver v0.22.2
