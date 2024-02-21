@@ -11,7 +11,7 @@ require (
 	github.com/getlantern/httptest v0.0.0-20161025015934-4b40f4c7e590
 	github.com/go-openapi/spec v0.19.7
 	github.com/go-redis/redis/v8 v8.11.3
-	github.com/golang/mock v1.5.0
+	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
 	github.com/gorilla/mux v1.8.1
 	github.com/gorilla/sessions v1.2.1
