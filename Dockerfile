@@ -70,7 +70,7 @@ RUN mkdir /charts && /helm_bin/linux-amd64/helm init --client-only --stable-repo
 # Executable container bases
 # --------------------------
 
-FROM alpine:3.15 AS ssl_runner
+FROM alpine:3.19 AS ssl_runner
 # Install SSL ca certificates
 RUN apk add --no-cache ca-certificates
 # Create user to be used in executable containers
@@ -79,7 +79,7 @@ RUN addgroup -g 65532 -S nonroot && adduser -u 65532 -S nonroot -G nonroot
 # Set the uid as an integer for compatibility with runAsNonRoot in Kubernetes
 USER 65532
 
-FROM alpine:3.15 AS ssl_iptables_root_runner
+FROM alpine:3.19 AS ssl_iptables_root_runner
 # Install SSL ca certificates
 RUN apk add --no-cache ca-certificates iptables
 
