@@ -7,7 +7,7 @@ require (
 	contrib.go.opencensus.io/exporter/prometheus v0.4.0
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/coreos/go-oidc v2.2.1+incompatible
-	github.com/fsnotify/fsnotify v1.4.9
+	github.com/fsnotify/fsnotify v1.7.0
 	github.com/getlantern/httptest v0.0.0-20161025015934-4b40f4c7e590
 	github.com/go-openapi/spec v0.19.7
 	github.com/go-redis/redis/v8 v8.11.3
@@ -32,7 +32,7 @@ require (
 	golang.org/x/net v0.0.0-20210525063256-abc453219eb5
 	golang.org/x/oauth2 v0.0.0-20210615190721-d04028783cf1
 	golang.org/x/sync v0.0.0-20210220032951-036812b2e83c
-	golang.org/x/sys v0.0.0-20210817190340-bfb29a6856f2 // indirect
+	golang.org/x/sys v0.4.0 // indirect
 	google.golang.org/genproto v0.0.0-20210624174822-c5cf32407d0a // indirect
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/h2non/gock.v1 v1.0.15
