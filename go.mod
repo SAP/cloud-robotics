@@ -41,7 +41,7 @@ require (
 	k8s.io/apimachinery v0.22.2
 	k8s.io/cli-runtime v0.22.2
 	k8s.io/client-go v0.22.2
-	k8s.io/helm v2.16.0+incompatible
+	k8s.io/helm v2.17.0+incompatible
 	k8s.io/klog v1.0.0
 	sigs.k8s.io/controller-runtime v0.10.2
 	sigs.k8s.io/kind v0.10.0
