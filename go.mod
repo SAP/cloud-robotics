@@ -9,7 +9,7 @@ require (
 	github.com/coreos/go-oidc v2.2.1+incompatible
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/getlantern/httptest v0.0.0-20161025015934-4b40f4c7e590
-	github.com/go-openapi/spec v0.19.7
+	github.com/go-openapi/spec v0.20.14
 	github.com/go-redis/redis/v8 v8.11.3
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
@@ -66,8 +66,6 @@ require (
 	github.com/BurntSushi/toml v0.4.1 // indirect
 	github.com/Masterminds/semver v1.5.0 // indirect
 	github.com/Masterminds/sprig v2.16.0+incompatible // indirect
-	github.com/PuerkitoBio/purell v1.1.1 // indirect
-	github.com/PuerkitoBio/urlesc v0.0.0-20170810143723-de5bf2ad4578 // indirect
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/aokoli/goutils v1.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
@@ -86,9 +84,9 @@ require (
 	github.com/go-logfmt/logfmt v0.5.0 // indirect
 	github.com/go-logr/logr v0.4.0 // indirect
 	github.com/go-logr/zapr v0.4.0 // indirect
-	github.com/go-openapi/jsonpointer v0.19.5 // indirect
-	github.com/go-openapi/jsonreference v0.19.5 // indirect
-	github.com/go-openapi/swag v0.19.14 // indirect
+	github.com/go-openapi/jsonpointer v0.20.2 // indirect
+	github.com/go-openapi/jsonreference v0.20.4 // indirect
+	github.com/go-openapi/swag v0.22.6 // indirect
 	github.com/gobwas/glob v0.2.3 // indirect
 	github.com/gogo/protobuf v1.3.2 // indirect
 	github.com/golang/gddo v0.0.0-20180823221919-9d8ff1c67be5 // indirect
@@ -108,7 +106,7 @@ require (
 	github.com/josharian/intern v1.0.0 // indirect
 	github.com/json-iterator/go v1.1.11 // indirect
 	github.com/liggitt/tabwriter v0.0.0-20181228230101-89fcab3d43de // indirect
-	github.com/mailru/easyjson v0.7.6 // indirect
+	github.com/mailru/easyjson v0.7.7 // indirect
 	github.com/mattn/go-isatty v0.0.14 // indirect
 	github.com/matttproud/golang_protobuf_extensions v1.0.2-0.20181231171920-c182affec369 // indirect
 	github.com/modern-go/concurrent v0.0.0-20180306012644-bacd9c7ef1dd // indirect
