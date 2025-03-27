@@ -10,7 +10,7 @@ require (
 	github.com/fsnotify/fsnotify v1.7.0
 	github.com/getlantern/httptest v0.0.0-20161025015934-4b40f4c7e590
 	github.com/go-openapi/spec v0.19.7
-	github.com/go-redis/redis/v8 v8.11.3
+	github.com/go-redis/redis/v8 v8.11.5
 	github.com/golang/mock v1.6.0
 	github.com/golang/protobuf v1.5.2
 	github.com/gorilla/mux v1.8.1
@@ -18,7 +18,7 @@ require (
 	github.com/jhump/protoreflect v1.9.0
 	github.com/mitchellh/go-server-timing v1.0.2-0.20201108055052-feb680ab92c2
 	github.com/motemen/go-loghttp v0.0.0-20170804080138-974ac5ceac27
-	github.com/onsi/gomega v1.15.0
+	github.com/onsi/gomega v1.18.1
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.11.0
 	github.com/quasoft/memstore v0.0.0-20191010062613-2bce066d2b0b
@@ -71,7 +71,7 @@ require (
 	github.com/alessio/shellescape v1.4.1 // indirect
 	github.com/aokoli/goutils v1.0.1 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cespare/xxhash/v2 v2.1.1 // indirect
+	github.com/cespare/xxhash/v2 v2.1.2 // indirect
 	github.com/cyphar/filepath-securejoin v0.2.2 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
