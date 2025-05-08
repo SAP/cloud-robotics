@@ -868,7 +868,7 @@ k8s.io/client-go/util/workqueue
 ## explicit; go 1.16
 k8s.io/component-base/config
 k8s.io/component-base/config/v1alpha1
-# k8s.io/helm v2.16.0+incompatible
+# k8s.io/helm v2.17.0+incompatible
 ## explicit
 k8s.io/helm/internal/third_party/dep/fs
 k8s.io/helm/pkg/chartutil
