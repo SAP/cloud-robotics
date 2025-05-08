@@ -73,15 +73,12 @@ Fluent-bit on the edge is configured automatically when connecting the robot.
 
 ## fluent-bit kyma
 
-Logs from Kyma cluster are streamed via an own instance of fluent-bit according to [this howto](https://pages.github.tools.sap/perfx/cloud-logging-service/consumption/from-sap-cp-kyma/#btp-kyma-runtime-managed). 
+Logs from Kyma cluster are streamed via an own instance of fluent-bit. 
 However, differing from the howto logs are streamed to our fluentd instance first instead of streaming it to SAP Cloud Logging directly. 
 
 ### Configuration
 
 The basic configuration of fluent-bit on Kyma is included in the helm chart `charts/base-cloud`.
-
-Please note that the fluent-bit configuration for both kyma and edge (robot) clusters were largely taken from the [official BTP Cloud Logging guide for
-logging with fluent-bit and kyma](https://pages.github.tools.sap/perfx/cloud-logging-service/consumption/from-sap-cp-kyma/).
 
 ## fluentd
 

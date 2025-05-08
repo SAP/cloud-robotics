@@ -81,7 +81,6 @@ fluentd:
     - fluentd-prometheus-conf
 
 # Kyma fluent-bit subchart
-# According to https://pages.github.tools.sap/perfx/cloud-logging-service/consumption/from-sap-cp-kyma/#btp-kyma-runtime-managed
 fluent-bit:
   fullnameOverride: fluent-bit
   nameOverride: fluent-bit
